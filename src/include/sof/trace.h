@@ -104,9 +104,9 @@
 
 /* move to config.h */
 #define TRACE	1
-#define TRACEV	0
+#define TRACEV	1
 #define TRACEE	1
-#define TRACEM	0 /* send all trace messages to mbox and local trace buffer */
+#define TRACEM	1 /* send all trace messages to mbox and local trace buffer */
 
 void _trace_event(uint32_t event);
 void _trace_event_mbox(uint32_t event);
