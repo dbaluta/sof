@@ -44,6 +44,7 @@ enum machine_id {
 	MACHINE_CANNONLAKE,
 	MACHINE_ICELAKE,
 	MACHINE_SUECREEK,
+	MACHINE_IMX8QXP,
 	MACHINE_MAX
 };
 
@@ -196,6 +197,6 @@ extern const struct adsp machine_icl;
 extern const struct adsp machine_sue;
 extern const struct adsp machine_skl;
 extern const struct adsp machine_kbl;
-
+extern const struct adsp machine_imx8qxp;
 
 #endif
