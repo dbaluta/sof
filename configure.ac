@@ -415,6 +415,22 @@ case "$with_platform" in
 	AC_DEFINE([CONFIG_MEM_WND], [1], [Configure Memory Windows])
 	AC_DEFINE([CONFIG_TASK_HAVE_PRIORITY_MEDIUM], [1], [Configure handling medium priority task])
     ;;
+    imx8qxp*)
+
+	PLATFORM_LDSCRIPT="imx8qxp.x"
+	AC_SUBST(PLATFORM_LDSCRIPT)
+
+	PLATFORM="imx8qxp"
+	AC_SUBST(PLATFORM)
+
+	FW_NAME="imx8qxp"
+	AC_SUBST(FW_NAME)
+
+	XTENSA_CORE="hifi4_std"
+	AC_SUBST(XTENSA_CORE)
+
+	AC_DEFINE([CONFIG_IMX8QXP], [1], [Configure for i.MX8 QXP])
+    ;;
     *)
 	if test "$have_rimage" = "no" && test "$have_doc" = "no"; then
 		if test "$ARCH" = "host"; then
@@ -435,6 +451,7 @@ AM_CONDITIONAL(BUILD_APOLLOLAKE,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "skl" 
 AM_CONDITIONAL(BUILD_CANNONLAKE,  test "$FW_NAME" = "cnl")
 AM_CONDITIONAL(BUILD_SUECREEK,  test "$FW_NAME" = "sue")
 AM_CONDITIONAL(BUILD_ICELAKE,  test "$FW_NAME" = "icl")
+AM_CONDITIONAL(BUILD_IMX8QXP,  test "$FW_NAME" = "imx8qxp")
 AM_CONDITIONAL(BUILD_BOOTLOADER,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "cnl" -o "$FW_NAME" = "icl" -o "$FW_NAME" = "sue" -o "$FW_NAME" = "skl" -o "$FW_NAME" = "kbl")
 AM_CONDITIONAL(BUILD_CAVS,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "cnl" -o "$FW_NAME" = "icl" -o "$FW_NAME" = "sue" -o "$FW_NAME" = "skl" -o "$FW_NAME" = "kbl")
 AM_CONDITIONAL(BUILD_MODULE,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "cnl" -o "$FW_NAME" = "icl" -o "$FW_NAME" = "sue" -o "$FW_NAME" = "skl" -o "$FW_NAME" = "kbl")
@@ -653,6 +670,12 @@ AC_CONFIG_FILES([
 	src/platform/icelake/include/arch/xtensa/Makefile
 	src/platform/icelake/include/arch/xtensa/config/Makefile
 	src/platform/icelake/include/platform/Makefile
+	src/platform/imx8qxp/Makefile
+	src/platform/imx8qxp/include/Makefile
+	src/platform/imx8qxp/include/arch/Makefile
+	src/platform/imx8qxp/include/arch/xtensa/Makefile
+	src/platform/imx8qxp/include/arch/xtensa/config/Makefile
+	src/platform/imx8qxp/include/platform/Makefile
 	src/platform/intel/Makefile
 	src/platform/intel/cavs/Makefile
 	test/Makefile
