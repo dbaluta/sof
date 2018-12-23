@@ -85,7 +85,8 @@ _ResetVector:
 
 /* Apollolake+ have reset vector in ROM */
 #if defined(CONFIG_BAYTRAIL) || defined(CONFIG_CHERRYTRAIL) \
-	|| defined (CONFIG_HASWELL) || defined(CONFIG_BROADWELL)
+	|| defined (CONFIG_HASWELL) || defined(CONFIG_BROADWELL) \
+	|| defined(CONFIG_IMX8)
 	j	_ResetHandler
 #else
 

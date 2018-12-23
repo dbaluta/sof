@@ -31,3 +31,7 @@ endif
 if BUILD_ICELAKE
 SUBDIRS += icelake
 endif
+
+if BUILD_IMX8
+SUBDIRS += imx8
+endif

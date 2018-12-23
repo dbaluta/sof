@@ -44,6 +44,14 @@
 #define BDW_DRAM_HOST_OFFSET	0x00000000
 #define BDW_DRAM_SIZE		(640 * 1024)
 
+#define IMX8QXP_IRAM_BASE		0x596f8000
+#define IMX8QXP_IRAM_HOST_OFFSET	0x10000
+#define IMX8QXP_IRAM_SIZE		0x800
+#define IMX8QXP_DRAM0_BASE		0x596e8000
+#define IMX8QXP_DRAM0_SIZE		0x8000
+#define IMX8QXP_SDRAM_BASE		0x92400000
+#define IMX8QXP_SDRAM_SIZE		0x800000
+
 static int is_iram(struct image *image, Elf32_Shdr *section)
 {
 	const struct adsp *adsp = image->adsp;
@@ -78,6 +86,23 @@ static int is_dram(struct image *image, Elf32_Shdr *section)
 	return 1;
 }
 
+static int is_sdram(struct image *image, Elf32_Shdr *section)
+{
+	const struct adsp *adsp = image->adsp;
+	uint32_t start, end;
+
+	start = section->sh_addr;
+	end = section->sh_addr + section->sh_size;
+
+	if (start < adsp->sdram_base)
+		return 0;
+	if (start >= adsp->sdram_base + adsp->sdram_size)
+		return 0;
+	if (end > adsp->sdram_base + adsp->sdram_size)
+		return 0;
+	return 1;
+}
+
 static int block_idx;
 
 static int write_block(struct image *image, struct module *module,
@@ -105,7 +130,12 @@ static int write_block(struct image *image, struct module *module,
 		block.type = SOF_BLK_DATA;
 		block.offset = section->sh_addr - adsp->dram_base
 			+ adsp->host_dram_offset;
+	} else if (is_sdram(image, section)) {
+		block.type = SOF_BLK_SDRAM;
+		block.offset = section->sh_addr - adsp->sdram_base
+			+ adsp->host_sdram_offset;
 	} else {
+
 		fprintf(stderr, "error: invalid block address/size 0x%x/0x%x\n",
 			section->sh_addr, section->sh_size);
 		return -EINVAL;
@@ -146,7 +176,7 @@ static int write_block(struct image *image, struct module *module,
 
 	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8x\t0x%8.8lx\t%s\n", block_idx++,
 		section->sh_addr, section->sh_size, ftell(image->out_fd),
-		block.type == SOF_BLK_TEXT ? "TEXT" : "DATA");
+		block.type == SOF_BLK_TEXT ? "TEXT" : "DATA", block.type);
 
 out:
 	free(buffer);
@@ -528,3 +558,20 @@ const struct adsp machine_bdw = {
 	.machine_id = MACHINE_BROADWELL,
 	.write_firmware = simple_write_firmware,
 };
+
+const struct adsp machine_imx8qxp = {
+	.name = "imx8qxp",
+	.iram_base = IMX8QXP_IRAM_BASE,
+	.iram_size = IMX8QXP_IRAM_SIZE,
+	.host_iram_offset = IMX8QXP_IRAM_HOST_OFFSET,
+	.dram_base = IMX8QXP_DRAM0_BASE,
+	.dram_size = IMX8QXP_DRAM0_SIZE,
+	.host_dram_offset = 0,
+	.sdram_base = IMX8QXP_SDRAM_BASE,
+	.sdram_size = IMX8QXP_SDRAM_SIZE,
+	.host_sdram_offset = 0,
+
+	.machine_id = MACHINE_IMX8QXP,
+	.write_firmware = simple_write_firmware,
+};
+

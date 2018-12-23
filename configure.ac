@@ -107,7 +107,7 @@ AC_ARG_ENABLE(rimage, [AS_HELP_STRING([--enable-rimage],[build rimage tool])], h
 IMPLICIT_FALLTHROUGH_FLAG=""
 if test "$have_rimage" = "yes"; then
 	AC_DEFINE([CONFIG_RIMAGE], [1], [Configure to build rimage])
-	AM_CFLAGS="-O2 -g -Wall -Werror -Wl,-EL -Wmissing-prototypes"
+	AM_CFLAGS=" -g -Wall -Werror -Wl,-EL -Wmissing-prototypes"
 	IMPLICIT_FALLTHROUGH_FLAG="-Wimplicit-fallthrough=3"
 fi
 AM_CONDITIONAL(BUILD_RIMAGE, test "$have_rimage" = "yes")
@@ -143,7 +143,7 @@ case "$with_arch" in
 	AM_CCASFLAGS=""
 
 	# GCC needs these additional flags on top of any user flags.
-	CFLAGS="${CFLAGS:+$CFLAGS } -O2 -g -Wall -Werror -Wl,-EL -Wmissing-prototypes"
+	CFLAGS="${CFLAGS:+$CFLAGS } -g -Wall -Werror -Wl,-EL -Wmissing-prototypes"
 	LDFLAGS="${LDFLAGS:+$LDFLAGS } -nostdlib"
 	CCASFLAGS="${CCASFLAGS:+$CCASFLAGS } -fno-inline-functions -nostdlib -mlongcalls"
 
@@ -415,6 +415,22 @@ case "$with_platform" in
 	AC_DEFINE([CONFIG_MEM_WND], [1], [Configure Memory Windows])
 	AC_DEFINE([CONFIG_TASK_HAVE_PRIORITY_MEDIUM], [1], [Configure handling medium priority task])
     ;;
+    imx8)
+
+	PLATFORM_LDSCRIPT="imx8.x"
+	AC_SUBST(PLATFORM_LDSCRIPT)
+
+	PLATFORM="imx8"
+	AC_SUBST(PLATFORM)
+
+	FW_NAME="imx8"
+	AC_SUBST(FW_NAME)
+
+	XTENSA_CORE="hifi4_std"
+	AC_SUBST(XTENSA_CORE)
+
+	AC_DEFINE([CONFIG_IMX8], [1], [Configure for i.MX8])
+    ;;
     *)
 	if test "$have_rimage" = "no" && test "$have_doc" = "no"; then
 		if test "$ARCH" = "host"; then
@@ -435,6 +451,7 @@ AM_CONDITIONAL(BUILD_APOLLOLAKE,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "skl" 
 AM_CONDITIONAL(BUILD_CANNONLAKE,  test "$FW_NAME" = "cnl")
 AM_CONDITIONAL(BUILD_SUECREEK,  test "$FW_NAME" = "sue")
 AM_CONDITIONAL(BUILD_ICELAKE,  test "$FW_NAME" = "icl")
+AM_CONDITIONAL(BUILD_IMX8,  test "$FW_NAME" = "imx8")
 AM_CONDITIONAL(BUILD_BOOTLOADER,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "cnl" -o "$FW_NAME" = "icl" -o "$FW_NAME" = "sue" -o "$FW_NAME" = "skl" -o "$FW_NAME" = "kbl")
 AM_CONDITIONAL(BUILD_CAVS,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "cnl" -o "$FW_NAME" = "icl" -o "$FW_NAME" = "sue" -o "$FW_NAME" = "skl" -o "$FW_NAME" = "kbl")
 AM_CONDITIONAL(BUILD_MODULE,  test "$FW_NAME" = "apl" -o "$FW_NAME" = "cnl" -o "$FW_NAME" = "icl" -o "$FW_NAME" = "sue" -o "$FW_NAME" = "skl" -o "$FW_NAME" = "kbl")
@@ -596,6 +613,7 @@ AC_CONFIG_FILES([
 	src/audio/Makefile
 	src/math/Makefile
 	src/drivers/Makefile
+	src/drivers/imx/Makefile
 	src/drivers/intel/Makefile
 	src/drivers/intel/baytrail/Makefile
 	src/drivers/intel/haswell/Makefile
@@ -653,6 +671,12 @@ AC_CONFIG_FILES([
 	src/platform/icelake/include/arch/xtensa/Makefile
 	src/platform/icelake/include/arch/xtensa/config/Makefile
 	src/platform/icelake/include/platform/Makefile
+	src/platform/imx8/Makefile
+	src/platform/imx8/include/Makefile
+	src/platform/imx8/include/arch/Makefile
+	src/platform/imx8/include/arch/xtensa/Makefile
+	src/platform/imx8/include/arch/xtensa/config/Makefile
+	src/platform/imx8/include/platform/Makefile
 	src/platform/intel/Makefile
 	src/platform/intel/cavs/Makefile
 	test/Makefile

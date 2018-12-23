@@ -58,6 +58,11 @@ noinst_LIBRARIES += libxlevel6.a
 VECTOR_DEFS += -D__SPLIT__level6
 endif
 
+if BUILD_IMX8
+PLATFORM_DEFS = $(VECTOR_DEFS)
+endif
+
+
 LEVEL_SRC = \
 	int-handler.S \
 	int-vector.S \
