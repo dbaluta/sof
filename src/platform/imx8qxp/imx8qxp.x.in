@@ -108,10 +108,6 @@ PHDRS
   vector_int4_lit_phdr PT_LOAD;
   vector_int5_text_phdr PT_LOAD;
   vector_int5_lit_phdr PT_LOAD;
-  vector_int6_text_phdr PT_LOAD;
-  vector_int6_lit_phdr PT_LOAD;
-  vector_int7_text_phdr PT_LOAD;
-  vector_int7_lit_phdr PT_LOAD;
   vector_kernel_text_phdr PT_LOAD;
   vector_kernel_lit_phdr PT_LOAD;
   vector_user_text_phdr PT_LOAD;
@@ -206,61 +202,33 @@ SECTIONS
     _Level3InterruptVector_text_end = ABSOLUTE(.);
   } >vector_int3_text :vector_int3_text_phdr
 
-  .Level4InterruptVector.literal : ALIGN(4)
-  {
-    _Level4InterruptVector_literal_start = ABSOLUTE(.);
-    *(.Level4InterruptVector.literal)
-    _Level4InterruptVector_literal_end = ABSOLUTE(.);
-  } >vector_int4_lit :vector_int4_lit_phdr
-
-  .Level4InterruptVector.text : ALIGN(4)
-  {
-    _Level4InterruptVector_text_start = ABSOLUTE(.);
-    KEEP (*(.Level4InterruptVector.text))
-    _Level4InterruptVector_text_end = ABSOLUTE(.);
-  } >vector_int4_text :vector_int4_text_phdr
-
-  .Level5InterruptVector.literal : ALIGN(4)
-  {
-    _Level5InterruptVector_literal_start = ABSOLUTE(.);
-    *(.Level5InterruptVector.literal)
-    _Level5InterruptVector_literal_end = ABSOLUTE(.);
-  } >vector_int5_lit :vector_int5_lit_phdr
-
-  .Level5InterruptVector.text : ALIGN(4)
-  {
-    _Level5InterruptVector_text_start = ABSOLUTE(.);
-    KEEP (*(.Level5InterruptVector.text))
-    _Level5InterruptVector_text_end = ABSOLUTE(.);
-  } >vector_int5_text :vector_int5_text_phdr
-
   .DebugExceptionVector.literal : ALIGN(4)
   {
     _DebugExceptionVector_literal_start = ABSOLUTE(.);
     *(.DebugExceptionVector.literal)
     _DebugExceptionVector_literal_end = ABSOLUTE(.);
-  } >vector_int6_lit :vector_int6_lit_phdr
+  } >vector_int4_lit :vector_int4_lit_phdr
 
   .DebugExceptionVector.text : ALIGN(4)
   {
     _DebugExceptionVector_text_start = ABSOLUTE(.);
     KEEP (*(.DebugExceptionVector.text))
     _DebugExceptionVector_text_end = ABSOLUTE(.);
-  } >vector_int6_text :vector_int6_text_phdr
+  } >vector_int4_text :vector_int4_text_phdr
 
   .NMIExceptionVector.literal : ALIGN(4)
   {
     _NMIExceptionVector_literal_start = ABSOLUTE(.);
     *(.NMIExceptionVector.literal)
     _NMIExceptionVector_literal_end = ABSOLUTE(.);
-  } >vector_int7_lit :vector_int7_lit_phdr
+  } >vector_int5_lit :vector_int5_lit_phdr
 
   .NMIExceptionVector.text : ALIGN(4)
   {
     _NMIExceptionVector_text_start = ABSOLUTE(.);
     KEEP (*(.NMIExceptionVector.text))
     _NMIExceptionVector_text_end = ABSOLUTE(.);
-  } >vector_int7_text :vector_int7_text_phdr
+  } >vector_int5_text :vector_int5_text_phdr
 
   .KernelExceptionVector.literal : ALIGN(4)
   {
