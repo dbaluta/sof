@@ -40,7 +40,7 @@
 #define SHIM_SIZE	0x00004000
 
 #define IRAM_BASE	0x596f8000
-#define IRAM_SIZE	0x800
+#define IRAM_SIZE	0x80000
 
 #define DRAM0_BASE	0x596e8000
 #define DRAM0_SIZE	0x8000
