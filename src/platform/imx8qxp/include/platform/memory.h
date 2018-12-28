@@ -40,13 +40,13 @@
 #define SHIM_SIZE	0x00004000
 
 #define IRAM_BASE	0x596f8000
-#define IRAM_SIZE	0x80000
+#define IRAM_SIZE	0x800
 
-#define DRAM0_BASE	0x596e8000
-#define DRAM0_SIZE	0x8000
+#define DRAM0_BASE     0x596e8000
+#define DRAM0_SIZE     0x8000
 
-#define DRAM1_BASE	0x596f0000
-#define DRAM1_SIZE	0x8000
+#define DRAM1_BASE     0x596f0000
+#define DRAM1_SIZE     0x8000
 
 #define SDRAM_BASE	0x92400000
 #define SDRAM_SIZE	0x800000
@@ -90,7 +90,7 @@
  * +--------------------------------------------------------------------------+
  * | Offset              | Region         |  Size                             |
  * +---------------------+----------------+-----------------------------------+
- * | SDRAM_BASE          | RO Data        |  SOF_DATA_SIZE                    |
+ * | SDRAM_BASE          | RO Data        |  SOF_DATA_SIZE                   |
  * |                     | Data           |                                   |
  * |                     | BSS            |                                   |
  * +---------------------+----------------+-----------------------------------+
@@ -100,9 +100,9 @@
  * +---------------------+----------------+-----------------------------------+
  * | HEAP_BUFFER_BASE    | Module Buffers |  HEAP_BUFFER_SIZE                 |
  * +---------------------+----------------+-----------------------------------+
- * | SOF_STACK_END       | Stack          |  SOF_STACK_SIZE                   |
+ * | SOF_STACK_END      | Stack          |  SOF_STACK_SIZE                  |
  * +---------------------+----------------+-----------------------------------+
- * | SOF_STACK_BASE      |                |                                   |
+ * | SOF_STACK_BASE     |                |                                   |
  * +---------------------+----------------+-----------------------------------+
  */
 
