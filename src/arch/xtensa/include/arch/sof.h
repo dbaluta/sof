@@ -54,6 +54,7 @@ static inline void *arch_get_stack_ptr(void)
 
 static inline void *arch_dump_regs(uint32_t ps)
 {
+#if 0
 	struct sof_ipc_dsp_oops_xtensa *x =
 		(struct sof_ipc_dsp_oops_xtensa *) mailbox_get_exception_base();
 
@@ -107,6 +108,8 @@ static inline void *arch_dump_regs(uint32_t ps)
 
 	/* tell caller extended data can be placed hereafter */
 	return (void *)(x + 1);
+#endif
+	return NULL;
 }
 
 #endif
