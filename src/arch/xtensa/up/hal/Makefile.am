@@ -213,6 +213,14 @@ PLATFORM_DEFS = \
     $(CACHE_DEFS)
 endif
 
+if BUILD_IMX8QXP
+PLATFORM_DEFS = \
+	$(STATE_DEFS) \
+	$(DISASS_DEFS) \
+	$(MISC_DEFS) \
+	$(INTERRUPTS_DEFS) \
+	$(CACHE_DEFS)
+endif
 
 noinst_LIBRARIES = libhal.a
 
