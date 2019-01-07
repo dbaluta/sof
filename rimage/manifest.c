@@ -1187,15 +1187,3 @@ const struct adsp machine_sue = {
 	.man_v1_5_sue = &sue_manifest,
 	.exec_boot_ldr = 1,
 };
-
-const struct adsp machine_imx8qxp = {
-	.name = "imx8qxp",
-	.sram_base = SUE_DSP_HP_BASE_ENTRY,
-	.sram_size = 0x100000,
-	.image_size = 0x100000,
-	.dram_offset = 0,
-	.machine_id = MACHINE_IMX8QXP,
-	.write_firmware = man_write_fw_v1_8,
-	.write_firmware_meu = man_write_fw_meu_v1_8,
-	.man_v1_8 = &cnl_manifest,
-};
