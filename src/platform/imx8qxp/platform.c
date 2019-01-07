@@ -57,6 +57,8 @@
 #include <string.h>
 #include <version.h>
 
+struct timer *platform_timer;
+
 int platform_boot_complete(uint32_t boot_message)
 {
 	return 0;
