@@ -1,4 +1,8 @@
+if BUILD_BAYTRAIL
 SUBDIRS = intel
+else
+SUBDIRS = imx
+endif
 
 noinst_LTLIBRARIES = libdrivers.la
 
@@ -12,4 +16,8 @@ libdrivers_la_CFLAGS = \
 # This lib is just composition of convenience libraries
 libdrivers_la_SOURCES =
 
+if BUILD_BAYTRAIL
 libdrivers_la_LIBADD = intel/libdrivers.la
+else
+libdrivers_la_LIBADD = imx/libdrivers.la
+endif
