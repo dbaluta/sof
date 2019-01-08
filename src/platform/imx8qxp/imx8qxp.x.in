@@ -65,15 +65,12 @@ MEMORY
   vector_double_text :
         org = XCHAL_DOUBLEEXC_VECTOR_PADDR,
         len = SOF_MEM_VECT_TEXT_SIZE
-  sof_text_start :
+  sof_iram_text_start :
         org = XCHAL_DOUBLEEXC_VECTOR_PADDR + SOF_MEM_VECT_TEXT_SIZE,
-        len = 102400 + (IRAM_BASE + IRAM_SIZE) - (XCHAL_DOUBLEEXC_VECTOR_PADDR + SOF_MEM_VECT_TEXT_SIZE)
-  sof_data_ro :
-        org = SDRAM_BASE,
-        len = SOF_MEM_RO_SIZE
-  sof_data :
-        org = SDRAM_BASE + SOF_MEM_RO_SIZE,
-        len = HEAP_SYSTEM_BASE - (SDRAM_BASE + SOF_MEM_RO_SIZE)
+        len = (IRAM_BASE + IRAM_SIZE) - (XCHAL_DOUBLEEXC_VECTOR_PADDR + SOF_MEM_VECT_TEXT_SIZE)
+  sof_sdram0 :
+        org = SDRAM0_BASE,
+        len = SDRAM0_SIZE
   system_heap :
         org = HEAP_SYSTEM_BASE,
         len = HEAP_SYSTEM_SIZE
@@ -114,10 +111,8 @@ PHDRS
   vector_user_lit_phdr PT_LOAD;
   vector_double_text_phdr PT_LOAD;
   vector_double_lit_phdr PT_LOAD;
-  sof_text_start_phdr PT_LOAD;
-  sof_data_ro_phdr PT_LOAD;
-  sof_data_phdr PT_LOAD;
-  sof_data_bss_phdr PT_LOAD;
+  sof_iram_text_start_phdr PT_LOAD;
+  sof_sdram0_phdr PT_LOAD;
   system_heap_phdr PT_LOAD;
   system_runtime_heap_phdr PT_LOAD;
   runtime_heap_phdr PT_LOAD;
@@ -272,27 +267,13 @@ SECTIONS
     _DoubleExceptionVector_text_end = ABSOLUTE(.);
   } >vector_double_text :vector_double_text_phdr
 
-  .text : ALIGN(4)
+  .iram.text : ALIGN(4)
   {
     _stext = .;
-    _text_start = ABSOLUTE(.);
-    *(.entry.text)
-    *(.init.literal)
-    KEEP(*(.init))
-    *(.literal .text .literal.* .text.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
-    *(.fini.literal)
-    KEEP(*(.fini))
-    *(.gnu.version)
-    _text_end = ABSOLUTE(.);
-    _etext = .;
-  } >sof_text_start :sof_text_start_phdr
-
-  .reset.rodata : ALIGN(4)
-  {
-    _reset_rodata_start = ABSOLUTE(.);
-    *(.reset.rodata)
-    _reset_rodata_end = ABSOLUTE(.);
-  } >sof_data_ro :sof_data_ro_phdr
+    _iram_text_start = ABSOLUTE(.);
+    *(.iram0.literal .iram.literal .iram.text.literal .iram0.text .iram.text)
+    _iram_text_end = ABSOLUTE(.);
+  } >sof_iram_text_start :sof_iram_text_start_phdr
 
   .rodata : ALIGN(4)
   {
@@ -330,7 +311,30 @@ SECTIONS
     LONG(_bss_end)
     _bss_table_end = ABSOLUTE(.);
     _rodata_end = ABSOLUTE(.);
-  } >sof_data :sof_data_phdr
+  } >sof_sdram0 :sof_sdram0_phdr
+
+  .text : ALIGN(4)
+  {
+    _stext = .;
+    _text_start = ABSOLUTE(.);
+    *(.entry.text)
+    *(.init.literal)
+    KEEP(*(.init))
+    *(.literal .text .literal.* .text.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
+    *(.fini.literal)
+    KEEP(*(.fini))
+    *(.gnu.version)
+    _text_end = ABSOLUTE(.);
+    _etext = .;
+  } >sof_sdram0 :sof_sdram0_phdr
+
+  .reset.rodata : ALIGN(4)
+  {
+    _reset_rodata_start = ABSOLUTE(.);
+    *(.reset.rodata)
+    _reset_rodata_end = ABSOLUTE(.);
+  } >sof_sdram0 :sof_sdram0_phdr
+
 
   .data : ALIGN(4)
   {
@@ -348,7 +352,7 @@ SECTIONS
     *(.gnu.linkonce.s2.*)
     KEEP(*(.jcr))
     _data_end = ABSOLUTE(.);
-  } >sof_data :sof_data_phdr
+  } >sof_sdram0 :sof_sdram0_phdr
 
   .lit4 : ALIGN(4)
   {
@@ -357,7 +361,7 @@ SECTIONS
     *(.lit4.*)
     *(.gnu.linkonce.lit4.*)
     _lit4_end = ABSOLUTE(.);
-  } >sof_data :sof_data_phdr
+  } >sof_sdram0 :sof_sdram0_phdr
 
   .bss (NOLOAD) : ALIGN(8)
   {
@@ -378,7 +382,7 @@ SECTIONS
     *(COMMON)
     . = ALIGN (8);
     _bss_end = ABSOLUTE(.);
-  } >sof_data :sof_data_bss_phdr
+  } >sof_sdram0 :sof_sdram0_phdr
 
   /* stack */
   _end = SOF_STACK_END;
@@ -485,5 +489,5 @@ SECTIONS
   .fw_ready : ALIGN(4)
   {
     KEEP (*(.fw_ready))
-  } >sof_data :sof_data_phdr
+  } >sof_sdram0 :sof_sdram0_phdr
 }
