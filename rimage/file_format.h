@@ -85,6 +85,7 @@ enum snd_sof_fw_blk_type {
 	SOF_BLK_REGS	= 4,
 	SOF_BLK_SIG	= 5,
 	SOF_BLK_ROM	= 6,
+	SOF_BLK_SDRAM	= 7,
 	/* add new block types here */
 };
 
