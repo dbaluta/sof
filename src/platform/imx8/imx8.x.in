@@ -86,6 +86,9 @@ MEMORY
   sof_stack :
         org = SOF_STACK_END,
         len = SOF_STACK_BASE - SOF_STACK_END
+  sof_sdram1 :
+        org = SDRAM1_BASE,
+        len = SDRAM1_SIZE
   static_log_entries_seg (!ari) :
         org = LOG_ENTRY_ELF_BASE,
         len = LOG_ENTRY_ELF_SIZE
