@@ -174,7 +174,7 @@ static int write_block(struct image *image, struct module *module,
 		goto out;
 	}
 
-	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8x\t0x%8.8lx\t%s\n", block_idx++,
+	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8x\t0x%8.8lx\t%s %d\n", block_idx++,
 		section->sh_addr, section->sh_size, ftell(image->out_fd),
 		block.type == SOF_BLK_TEXT ? "TEXT" : "DATA", block.type);
 
