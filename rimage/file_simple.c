@@ -560,7 +560,7 @@ const struct adsp machine_bdw = {
 };
 
 const struct adsp machine_imx8qxp = {
-	.name = "imx8qxp",
+	.name = "imx8",
 	.iram_base = IMX8QXP_IRAM_BASE,
 	.iram_size = IMX8QXP_IRAM_SIZE,
 	.host_iram_offset = IMX8QXP_IRAM_HOST_OFFSET,
