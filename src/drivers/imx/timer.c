@@ -26,8 +26,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * Author: Liam Girdwood <liam.r.girdwood@linux.intel.com>
- *
- * Baytrail external timer control.
  */
 
 #include <platform/timer.h>
@@ -38,62 +36,89 @@
 #include <sof/drivers/timer.h>
 #include <stdint.h>
 
-struct timer_data {
-	void (*handler2)(void *arg);
-	void *arg2;
-};
-
 void platform_timer_start(struct timer *timer)
 {
+	arch_timer_enable(timer);
 }
 
-/* this seems to stop rebooting with RTD3 ???? */
 void platform_timer_stop(struct timer *timer)
 {
+	arch_timer_disable(timer);
 }
 
 int platform_timer_set(struct timer *timer, uint64_t ticks)
 {
-	return 0;
+	return arch_timer_set(timer, ticks);
 }
 
 void platform_timer_clear(struct timer *timer)
 {
+	arch_timer_clear(timer);
 }
 
 uint64_t platform_timer_get(struct timer *timer)
 {
-	return 0;
+	return arch_timer_get_system(timer);
 }
 
+/* get timestamp for host stream DMA position */
 void platform_host_timestamp(struct comp_dev *host,
 			     struct sof_ipc_stream_posn *posn)
 {
+	int err;
+
+	/* get host position */
+	err = comp_position(host, posn);
+	if (err == 0)
+		posn->flags |= SOF_TIME_HOST_VALID | SOF_TIME_HOST_64;
 }
 
+/* get timestamp for DAI stream DMA position */
 void platform_dai_timestamp(struct comp_dev *dai,
 			    struct sof_ipc_stream_posn *posn)
 {
+	int err;
+
+	/* get DAI position */
+	err = comp_position(dai, posn);
+	if (err == 0)
+		posn->flags |= SOF_TIME_DAI_VALID;
+
+	/* get SSP wallclock - DAI sets this to stream start value */
+	posn->wallclock = timer_get_system(platform_timer) - posn->wallclock;
+	posn->flags |= SOF_TIME_WALL_VALID | SOF_TIME_WALL_64;
 }
 
+/* get current wallclock for componnent */
 void platform_dai_wallclock(struct comp_dev *dai, uint64_t *wallclock)
 {
+	/* only 1 wallclock on HSW */
+	*wallclock = timer_get_system(platform_timer);
 }
-
 
 int timer_register(struct timer *timer, void(*handler)(void *arg), void *arg)
 {
-	return 0;
+	switch (timer->id) {
+	case TIMER0:
+	case TIMER1:
+	case TIMER2:
+		return arch_timer_register(timer, handler, arg);
+	default:
+		return -EINVAL;
+	}
 }
 
 void timer_unregister(struct timer *timer)
 {
+	interrupt_unregister(timer->irq);
 }
 
 void timer_enable(struct timer *timer)
 {
+	interrupt_enable(timer->irq);
 }
 
 void timer_disable(struct timer *timer)
 {
+	interrupt_disable(timer->irq);
 }
