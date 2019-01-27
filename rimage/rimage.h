@@ -44,6 +44,7 @@ enum machine_id {
 	MACHINE_CANNONLAKE,
 	MACHINE_ICELAKE,
 	MACHINE_SUECREEK,
+	MACHINE_IMX8,
 	MACHINE_MAX
 };
 
@@ -139,8 +140,11 @@ struct adsp {
 	uint32_t dram_size;
 	uint32_t sram_base;
 	uint32_t sram_size;
+	uint32_t sdram_base;
+	uint32_t sdram_size;
 	uint32_t host_iram_offset;
 	uint32_t host_dram_offset;
+	uint32_t host_sdram_offset;
 	uint32_t rom_base;
 	uint32_t rom_size;
 	uint32_t imr_base;
@@ -196,6 +200,6 @@ extern const struct adsp machine_icl;
 extern const struct adsp machine_sue;
 extern const struct adsp machine_skl;
 extern const struct adsp machine_kbl;
-
+extern const struct adsp machine_imx8;
 
 #endif
