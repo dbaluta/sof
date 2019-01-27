@@ -1,2 +1,7 @@
 add_subdirectory(intel)
 add_subdirectory(dw)
+if(CONFIG_BAYTRAIL)
+add_local_sources(sof dw-dma.c)
+else(CONFIG_IMX8)
+add_subdirectory(imx)
+endif()
