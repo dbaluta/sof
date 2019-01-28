@@ -39,7 +39,8 @@ static int man_open_rom_file(struct image *image)
 	unlink(image->out_rom_file);
 
 	/* allocate ROM image  */
-	image->rom_image = calloc(image->adsp->rom_size, 1);
+	image->rom_image = calloc(image->adsp->mem_zones[SOF_BAR_TYPE_ROM].size,
+				  1);
 	if (image->rom_image == NULL)
 		return -ENOMEM;
 
@@ -1099,10 +1100,16 @@ err:
 /* list of supported adsp */
 const struct adsp machine_apl = {
 	.name = "apl",
-	.rom_base = ADSP_APL_DSP_ROM_BASE,
-	.rom_size = ADSP_APL_DSP_ROM_SIZE,
-	.sram_base = APL_DSP_BASE_ENTRY,
-	.sram_size = 0x100000,
+	.mem_zones = {
+		[SOF_BAR_TYPE_ROM] = {
+			.base = ADSP_APL_DSP_ROM_BASE,
+			.size = ADSP_APL_DSP_ROM_SIZE,
+		},
+		[SOF_BAR_TYPE_SRAM] = {
+			.base = APL_DSP_BASE_ENTRY,
+			.size = 0x100000,
+		},
+	},
 	.image_size = 0x100000,
 	.dram_offset = 0,
 	.machine_id = MACHINE_APOLLOLAKE,
@@ -1113,10 +1120,16 @@ const struct adsp machine_apl = {
 
 const struct adsp machine_kbl = {
 	.name = "kbl",
-	.rom_base = ADSP_KBL_DSP_ROM_BASE,
-	.rom_size = ADSP_KBL_DSP_ROM_SIZE,
-	.sram_base = KBL_DSP_BASE_ENTRY,
-	.sram_size = 0x100000,
+	.mem_zones = {
+		[SOF_BAR_TYPE_ROM] = {
+			.base = ADSP_KBL_DSP_ROM_BASE,
+			.size = ADSP_KBL_DSP_ROM_SIZE,
+		},
+		[SOF_BAR_TYPE_SRAM] = {
+			.base = KBL_DSP_BASE_ENTRY,
+			.size = 0x100000,
+		},
+	},
 	.image_size = 0x100000,
 	.dram_offset = 0,
 	.machine_id = MACHINE_KABYLAKE,
@@ -1127,10 +1140,16 @@ const struct adsp machine_kbl = {
 
 const struct adsp machine_skl = {
 	.name = "skl",
-	.rom_base = ADSP_SKL_DSP_ROM_BASE,
-	.rom_size = ADSP_SKL_DSP_ROM_SIZE,
-	.sram_base = SKL_DSP_BASE_ENTRY,
-	.sram_size = 0x100000,
+	.mem_zones = {
+		[SOF_BAR_TYPE_ROM] = {
+			.base = ADSP_SKL_DSP_ROM_BASE,
+			.size = ADSP_SKL_DSP_ROM_SIZE,
+		},
+		[SOF_BAR_TYPE_SRAM] = {
+			.base = SKL_DSP_BASE_ENTRY,
+			.size = 0x100000,
+		},
+	},
 	.image_size = 0x100000,
 	.dram_offset = 0,
 	.machine_id = MACHINE_SKYLAKE,
@@ -1141,12 +1160,20 @@ const struct adsp machine_skl = {
 
 const struct adsp machine_cnl = {
 	.name = "cnl",
-	.rom_base = ADSP_CNL_DSP_ROM_BASE,
-	.rom_size = ADSP_CNL_DSP_ROM_SIZE,
-	.imr_base = CNL_DSP_IMR_BASE_ENTRY,
-	.imr_size = 0x100000,
-	.sram_base = CNL_DSP_HP_BASE_ENTRY,
-	.sram_size = 0x100000,
+	.mem_zones = {
+		[SOF_BAR_TYPE_ROM] = {
+			.base = ADSP_CNL_DSP_ROM_BASE,
+			.size = ADSP_CNL_DSP_ROM_SIZE,
+		},
+		[SOF_BAR_TYPE_IMR] = {
+			.base = CNL_DSP_IMR_BASE_ENTRY,
+			.size = 0x100000,
+		},
+		[SOF_BAR_TYPE_SRAM] = {
+			.base = CNL_DSP_HP_BASE_ENTRY,
+			.size = 0x100000,
+		},
+	},
 	.image_size = 0x100000,
 	.dram_offset = 0,
 	.machine_id = MACHINE_CANNONLAKE,
@@ -1157,12 +1184,20 @@ const struct adsp machine_cnl = {
 
 const struct adsp machine_icl = {
 	.name = "icl",
-	.rom_base = ADSP_ICL_DSP_ROM_BASE,
-	.rom_size = ADSP_ICL_DSP_ROM_SIZE,
-	.imr_base = ICL_DSP_IMR_BASE_ENTRY,
-	.imr_size = 0x100000,
-	.sram_base = ICL_DSP_HP_BASE_ENTRY,
-	.sram_size = 0x100000,
+	.mem_zones = {
+		[SOF_BAR_TYPE_ROM] = {
+			.base = ADSP_ICL_DSP_ROM_BASE,
+			.size = ADSP_ICL_DSP_ROM_SIZE,
+		},
+		[SOF_BAR_TYPE_IMR] = {
+			.base = ICL_DSP_IMR_BASE_ENTRY,
+			.size = 0x100000,
+		},
+		[SOF_BAR_TYPE_SRAM] = {
+			.base = ICL_DSP_HP_BASE_ENTRY,
+			.size = 0x100000,
+		},
+	},
 	.image_size = 0x100000,
 	.dram_offset = 0,
 	.machine_id = MACHINE_ICELAKE,
@@ -1173,12 +1208,20 @@ const struct adsp machine_icl = {
 
 const struct adsp machine_sue = {
 	.name = "sue",
-	.rom_base = ADSP_SUE_DSP_ROM_BASE,
-	.rom_size = ADSP_SUE_DSP_ROM_SIZE,
-	.imr_base = SUE_DSP_IMR_BASE_ENTRY,
-	.imr_size = 0x100000,
-	.sram_base = SUE_DSP_HP_BASE_ENTRY,
-	.sram_size = 0x100000,
+	.mem_zones = {
+		[SOF_BAR_TYPE_ROM] = {
+			.base = ADSP_SUE_DSP_ROM_BASE,
+			.size = ADSP_SUE_DSP_ROM_SIZE,
+		},
+		[SOF_BAR_TYPE_IMR] = {
+			.base = SUE_DSP_IMR_BASE_ENTRY,
+			.size = 0x100000,
+		},
+		[SOF_BAR_TYPE_SRAM] = {
+			.base = SUE_DSP_HP_BASE_ENTRY,
+			.size = 0x100000,
+		},
+	},
 	.image_size = 0x100000,
 	.dram_offset = 0,
 	.machine_id = MACHINE_SUECREEK,

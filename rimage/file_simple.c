@@ -44,38 +44,27 @@
 #define BDW_DRAM_HOST_OFFSET	0x00000000
 #define BDW_DRAM_SIZE		(640 * 1024)
 
-static int is_iram(struct image *image, Elf32_Shdr *section)
-{
+static int get_mem_zone_type(struct image *image, Elf32_Shdr *section) {
 	const struct adsp *adsp = image->adsp;
-	uint32_t start, end;
+	uint32_t start, end, base, size;
+	int i;
 
 	start = section->sh_addr;
 	end = section->sh_addr + section->sh_size;
 
-	if (start < adsp->iram_base)
-		return 0;
-	if (start >= adsp->iram_base + adsp->iram_size)
-		return 0;
-	if (end > adsp->iram_base + adsp->iram_size)
-		return 0;
-	return 1;
-}
+	for (i = SOF_BAR_TYPE_START; i < SOF_BAR_TYPE_NUM; i++) {
+		base =  adsp->mem_zones[i].base;
+		size =  adsp->mem_zones[i].size;
 
-static int is_dram(struct image *image, Elf32_Shdr *section)
-{
-	const struct adsp *adsp = image->adsp;
-	uint32_t start, end;
-
-	start = section->sh_addr;
-	end = section->sh_addr + section->sh_size;
-
-	if (start < adsp->dram_base)
-		return 0;
-	if (start >= adsp->dram_base + adsp->dram_size)
-		return 0;
-	if (end > adsp->dram_base + adsp->dram_size)
-		return 0;
-	return 1;
+		if (start < base)
+			continue;
+		if (start >= base + size)
+			continue;
+		if (end > base + size)
+			continue;
+		return i;
+	}
+	return SOF_BAR_TYPE_INVALID;
 }
 
 static int block_idx;
@@ -97,14 +86,11 @@ static int write_block(struct image *image, struct module *module,
 		block.size += padding;
 	}
 
-	if (is_iram(image, section)) {
-		block.type = SOF_BLK_TEXT;
-		block.offset = section->sh_addr - adsp->iram_base
-			+ adsp->host_iram_offset;
-	} else if (is_dram(image, section)) {
-		block.type = SOF_BLK_DATA;
-		block.offset = section->sh_addr - adsp->dram_base
-			+ adsp->host_dram_offset;
+	ret = get_mem_zone_type(image, section);
+	if (ret != SOF_BAR_TYPE_INVALID) {
+		block.type = ret;
+		block.offset = section->sh_addr - adsp->mem_zones[ret].base
+			+ adsp->mem_zones[ret].host_offset;
 	} else {
 		fprintf(stderr, "error: invalid block address/size 0x%x/0x%x\n",
 			section->sh_addr, section->sh_size);
@@ -146,7 +132,7 @@ static int write_block(struct image *image, struct module *module,
 
 	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8x\t0x%8.8lx\t%s\n", block_idx++,
 		section->sh_addr, section->sh_size, ftell(image->out_fd),
-		block.type == SOF_BLK_TEXT ? "TEXT" : "DATA");
+		block.type == SOF_BAR_TYPE_IRAM ? "TEXT" : "DATA");
 
 out:
 	free(buffer);
@@ -241,7 +227,7 @@ static int write_block_reloc(struct image *image, struct module *module)
 	int ret;
 
 	block.size = module->file_size;
-	block.type = SOF_BLK_DATA;
+	block.type = SOF_BAR_TYPE_DRAM;
 	block.offset = 0;
 
 	/* write header */
@@ -277,7 +263,7 @@ static int write_block_reloc(struct image *image, struct module *module)
 
 	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8x\t0x%8.8lx\t%s\n", block_idx++,
 		0, module->file_size, ftell(image->out_fd),
-		block.type == SOF_BLK_TEXT ? "TEXT" : "DATA");
+		block.type == SOF_BAR_TYPE_IRAM ? "TEXT" : "DATA");
 
 out:
 	free(buffer);
@@ -471,60 +457,90 @@ out:
 
 const struct adsp machine_byt = {
 	.name = "byt",
-	.iram_base = BYT_IRAM_BASE,
-	.iram_size = BYT_IRAM_SIZE,
-	.host_iram_offset = BYT_IRAM_HOST_OFFSET,
-	.dram_base = BYT_DRAM_BASE,
-	.dram_size = BYT_DRAM_SIZE,
-	.host_dram_offset = BYT_DRAM_HOST_OFFSET,
+	.mem_zones = {
+		[SOF_BAR_TYPE_IRAM] = {
+			.base = BYT_IRAM_BASE,
+			.size = BYT_IRAM_SIZE,
+			.host_offset = BYT_IRAM_HOST_OFFSET,
+		},
+		[SOF_BAR_TYPE_DRAM] = {
+			.base = BYT_DRAM_BASE,
+			.size = BYT_DRAM_SIZE,
+			.host_offset = BYT_DRAM_HOST_OFFSET,
+		},
+	},
 	.machine_id = MACHINE_BAYTRAIL,
 	.write_firmware = simple_write_firmware,
 };
 
 const struct adsp machine_cht = {
 	.name = "cht",
-	.iram_base = BYT_IRAM_BASE,
-	.iram_size = BYT_IRAM_SIZE,
-	.host_iram_offset = BYT_IRAM_HOST_OFFSET,
-	.dram_base = BYT_DRAM_BASE,
-	.dram_size = BYT_DRAM_SIZE,
-	.host_dram_offset = BYT_DRAM_HOST_OFFSET,
+	.mem_zones = {
+		[SOF_BAR_TYPE_IRAM] = {
+			.base = BYT_IRAM_BASE,
+			.size = BYT_IRAM_SIZE,
+			.host_offset = BYT_IRAM_HOST_OFFSET,
+		},
+		[SOF_BAR_TYPE_DRAM] = {
+			.base = BYT_DRAM_BASE,
+			.size = BYT_DRAM_SIZE,
+			.host_offset = BYT_DRAM_HOST_OFFSET,
+		},
+	},
 	.machine_id = MACHINE_CHERRYTRAIL,
 	.write_firmware = simple_write_firmware,
 };
 
 const struct adsp machine_bsw = {
 	.name = "bsw",
-	.iram_base = BYT_IRAM_BASE,
-	.iram_size = BYT_IRAM_SIZE,
-	.host_iram_offset = BYT_IRAM_HOST_OFFSET,
-	.dram_base = BYT_DRAM_BASE,
-	.dram_size = BYT_DRAM_SIZE,
-	.host_dram_offset = BYT_DRAM_HOST_OFFSET,
+	.mem_zones = {
+		[SOF_BAR_TYPE_IRAM] = {
+			.base = BYT_IRAM_BASE,
+			.size = BYT_IRAM_SIZE,
+			.host_offset = BYT_IRAM_HOST_OFFSET,
+		},
+		[SOF_BAR_TYPE_DRAM] = {
+			.base = BYT_DRAM_BASE,
+			.size = BYT_DRAM_SIZE,
+			.host_offset = BYT_DRAM_HOST_OFFSET,
+		},
+	},
 	.machine_id = MACHINE_BRASWELL,
 	.write_firmware = simple_write_firmware,
 };
 
 const struct adsp machine_hsw = {
 	.name = "hsw",
-	.iram_base = HSW_IRAM_BASE,
-	.iram_size = HSW_IRAM_SIZE,
-	.host_iram_offset = HSW_IRAM_HOST_OFFSET,
-	.dram_base = HSW_DRAM_BASE,
-	.dram_size = HSW_DRAM_SIZE,
-	.host_dram_offset = HSW_DRAM_HOST_OFFSET,
+	.mem_zones = {
+		[SOF_BAR_TYPE_IRAM] = {
+			.base = HSW_IRAM_BASE,
+			.size = HSW_IRAM_SIZE,
+			.host_offset = HSW_IRAM_HOST_OFFSET,
+		},
+		[SOF_BAR_TYPE_DRAM] = {
+			.base = HSW_DRAM_BASE,
+			.size = HSW_DRAM_SIZE,
+			.host_offset = HSW_DRAM_HOST_OFFSET,
+		},
+	},
 	.machine_id = MACHINE_HASWELL,
 	.write_firmware = simple_write_firmware,
 };
 
 const struct adsp machine_bdw = {
 	.name = "bdw",
-	.iram_base = BDW_IRAM_BASE,
-	.iram_size = BDW_IRAM_SIZE,
-	.host_iram_offset = BDW_IRAM_HOST_OFFSET,
-	.dram_base = BDW_DRAM_BASE,
-	.dram_size = BDW_DRAM_SIZE,
-	.host_dram_offset = BDW_DRAM_HOST_OFFSET,
+	.mem_zones = {
+		[SOF_BAR_TYPE_IRAM] = {
+			.base = BDW_IRAM_BASE,
+			.size = BDW_IRAM_SIZE,
+			.host_offset = BDW_IRAM_HOST_OFFSET,
+		},
+		[SOF_BAR_TYPE_DRAM] = {
+			.base = BDW_DRAM_BASE,
+			.size = BDW_DRAM_SIZE,
+			.host_offset = BDW_DRAM_HOST_OFFSET,
+		},
+	},
 	.machine_id = MACHINE_BROADWELL,
 	.write_firmware = simple_write_firmware,
 };
