@@ -3,4 +3,6 @@ add_local_sources(sof
 	ipc.c
 	pmc-ipc.c
 	timer.c
+	peripheral.c
+	printf.c
 )
