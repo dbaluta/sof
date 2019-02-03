@@ -36,26 +36,19 @@
 #include <sof/interrupt-map.h>
 
 /* IRQ numbers */
-#define IRQ_NUM_SOFTWARE0	0	/* Level 1 */
-#define IRQ_NUM_TIMER1		1	/* Level 1 */
-#define IRQ_NUM_SOFTWARE1	2	/* Level 1 */
-#define IRQ_NUM_SOFTWARE2	3	/* Level 1 */
-#define IRQ_NUM_TIMER2		5	/* Level 2 */
-#define IRQ_NUM_SOFTWARE3	6	/* Level 2 */
-#define IRQ_NUM_TIMER3		7	/* Level 3 */
-#define IRQ_NUM_SOFTWARE4	8	/* Level 3 */
-#define IRQ_NUM_SOFTWARE5	9	/* Level 3 */
-#define IRQ_NUM_EXT_IA		10	/* Level 4 */
-#define IRQ_NUM_EXT_PMC		11	/* Level 4 */
-#define IRQ_NUM_SOFTWARE6	12	/* Level 5 */
-#define IRQ_NUM_EXT_DMAC0	13	/* Level 5 */
-#define IRQ_NUM_EXT_DMAC1	14	/* Level 5 */
-#define IRQ_NUM_EXT_TIMER	15	/* Level 5 */
-#define IRQ_NUM_EXT_SSP0	16	/* Level 5 */
-#define IRQ_NUM_EXT_SSP1	17	/* Level 5 */
-#define IRQ_NUM_EXT_SSP2	18	/* Level 5 */
-#define IRQ_NUM_EXT_DMAC2	19	/* Level 5 */
-#define IRQ_NUM_NMI		20	/* Level 7 */
+#define IRQ_NUM_TIMER0		2	/* Level 2 */
+#define IRQ_NUM_TIMER1		3	/* Level 3 */
+#define IRQ_NUM_MU		7	/* Level 2 */
+#define IRQ_NUM_SOFTWARE0	8	/* Level 1 */
+#define IRQ_NUM_SOFTWARE1	9	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP0	19	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP1	19	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP2	20	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP3	21	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP4	22	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP5	23	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP6	24	/* Level 2 */
+#define IRQ_NUM_IRQSTR_DSP7	25	/* Level 2 */
 
 /* SSP 3,4,5 share PHY IRQs with SSP 0,1,2 respectively but we give them a
   virtual number in order to differentiate from SSP0, 1 and 2 IRQs */
