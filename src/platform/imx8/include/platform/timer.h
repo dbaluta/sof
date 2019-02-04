@@ -36,12 +36,11 @@
 #include <sof/timer.h>
 #include <platform/interrupt.h>
 
-#define TIMER_COUNT	4
+#define TIMER_COUNT	2
 
 /* timer numbers must use associated IRQ number */
-#define TIMER0		IRQ_NUM_TIMER1
-#define TIMER1		IRQ_NUM_TIMER2
-#define TIMER2		IRQ_NUM_TIMER3
-#define TIMER3		IRQ_NUM_EXT_TIMER
-
+#define TIMER0		IRQ_NUM_TIMER0
+#define TIMER1		IRQ_NUM_TIMER1
+/*FIXME: we only support 2 timers */
+#define TIMER2		-1
 #endif
