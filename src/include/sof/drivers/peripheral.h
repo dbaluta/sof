@@ -31,6 +31,30 @@
 #include <stddef.h>
 #include <stdint.h>
 
+
+#define MU_CR_NMI_MASK                           0x8u
+#define MU_CR_GIRn_MASK                          0xF0000u
+#define MU_CR_GIRn_NMI_MASK		(MU_CR_GIRn_MASK | MU_CR_NMI_MASK)
+
+#define MU_SR_RF0_MASK				(1U << 27U)
+#define MU_SR_TE0_MASK				(1U << 23U)
+#define MU_CR_RIE0_MASK				(1U << 27U)
+
+#define XSHAL_MU13_SIDEB_BYPASS_PADDR 0x5D310000
+#define MU_PADDR  XSHAL_MU13_SIDEB_BYPASS_PADDR
+
+struct mu_regs {
+	volatile uint32_t		MU_TR[4];
+	volatile const  uint32_t	MU_RR[4];
+	volatile uint32_t		MU_SR;
+	volatile uint32_t		MU_CR;
+};
+
+void mu_enableinterrupt_rx(struct mu_regs *regs, uint32_t idx);
+void mu_enableinterrupt_gir(struct mu_regs *regs, uint32_t idx);
+void mu_msg_receive(struct mu_regs *regs, uint32_t regidx, uint32_t *msg);
+void mu_msg_send(struct mu_regs *regs, uint32_t regidx, uint32_t msg);
+
 #define LPUART_STAT_TDRE		(1 << 23)
 #define LPUART_FIFO_TXFE		0x80
 #define LPUART_FIFO_RXFE		0x40

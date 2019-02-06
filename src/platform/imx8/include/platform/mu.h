@@ -1,3 +1,7 @@
+
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
+
 /* Transmit Register */
 #define IMX_MU_xTRn(x)		(0x00 + 4 * (x))
 /* Receive Register */
@@ -33,13 +37,20 @@ static inline void imx_mu_write(uint32_t reg, uint32_t val)
 static inline uint32_t imx_mu_xcr_rmw(uint32_t set, uint32_t clr)
 {
 	//unsigned long flags;
-	uint32_t val;
+	volatile uint32_t val, val2;
 
 //	spin_lock_irqsave(&priv->xcr_lock, flags);
 	val = imx_mu_read(IMX_MU_xCR);
+	__dsp_printf("CR: read before %x [SET %x, CLR %x\n", val, set, clr);
 	val &= ~clr;
 	val |= set;
-	imx_mu_write(val, IMX_MU_xCR);
+	do {
+		imx_mu_write(val, IMX_MU_xCR);
+
+		val2 = imx_mu_read(IMX_MU_xCR);
+	} while (val != val2);
+
+	__dsp_printf("CR: read after, expected %x val, got %x\n", val, val2);
 //	spin_unlock_irqrestore(&priv->xcr_lock, flags);
 
 	return val;

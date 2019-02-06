@@ -47,6 +47,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 struct audio_data {
 	struct pipeline *p;
@@ -55,6 +57,7 @@ struct audio_data {
 int do_task_master_core(struct sof *sof)
 {
 	int ret;
+
 #ifdef STATIC_PIPE
 	struct audio_data pdata;
 #endif

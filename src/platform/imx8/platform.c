@@ -42,6 +42,8 @@
 #include <uapi/ipc/info.h>
 #include <sof/mailbox.h>
 #include <sof/dai.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 #include <sof/dma.h>
 #include <sof/interrupt.h>
 #include <sof/sof.h>
@@ -147,17 +149,30 @@ int platform_boot_complete(uint32_t boot_message)
 	mailbox_dspbox_write(sizeof(ready), &sram_window,
 			     sram_window.ext_hdr.hdr.size);
 
+	struct mu_regs *base = (struct mu_regs *)MU_PADDR;
+	mu_enableinterrupt_gir(base, 1);
+#if 0
+	__dsp_printf("imx8, wrote to dspbox\n");
 	/* now interrupt host to tell it we are done booting */
 //	shim_write(SHIM_IPCDL, SOF_IPC_FW_READY | outbox);
 //	shim_write(SHIM_IPCDH, SHIM_IPCDH_BUSY);
-	imx_mu_write(IMX_MU_xTRn(0), SOF_IPC_FW_READY);
+//
+	__dsp_printf("STATUS BEFORE %x\n", imx_mu_read(IMX_MU_xSR));
+	imx_mu_xcr_rmw(IMX_MU_xCR_GIEn(0), 0);
+	imx_mu_xcr_rmw(IMX_MU_xCR_GIEn(1), 0);
+	imx_mu_xcr_rmw(IMX_MU_xCR_GIEn(2), 0);
+	imx_mu_xcr_rmw(IMX_MU_xCR_GIEn(3), 0);
 
+	__dsp_printf("STATUS AFTER %x\n", imx_mu_read(IMX_MU_xSR));
+
+	//imx_mu_write(IMX_MU_xTRn(0), SOF_IPC_FW_READY);
+	//
 	/* boot now complete so we can relax the CPU */
 	/* For now skip this to gain more processing performance
 	 * for SRC component.
 	 */
 	/* clock_set_freq(CLK_CPU, CLK_DEFAULT_CPU_HZ); */
-
+#endif
 	return 0;
 }
 

@@ -88,9 +88,12 @@ int master_core_init(struct sof *sof)
 	return err;
 }
 
+
 int main(int argc, char *argv[])
 {
 	int err;
+
+	enable_log(&err);
 
 	trace_point(TRACE_BOOT_START);
 
@@ -98,10 +101,12 @@ int main(int argc, char *argv[])
 	sof.argc = argc;
 	sof.argv = argv;
 
-	if (cpu_get_id() == PLATFORM_MASTER_CORE_ID)
+
+	if (cpu_get_id() == PLATFORM_MASTER_CORE_ID) {
 		err = master_core_init(&sof);
-	else
+	} else {
 		err = slave_core_init(&sof);
+	}
 
 	/* should never get here */
 	panic(SOF_IPC_PANIC_TASK);

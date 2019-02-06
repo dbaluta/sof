@@ -42,6 +42,9 @@
 #include <sof/wait.h>
 #include <sof/trace.h>
 #include <sof/ssp.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
+
 #include <platform/interrupt.h>
 #include <platform/mailbox.h>
 #include <platform/shim.h>
@@ -95,6 +98,8 @@ static void irq_handler(void *arg)
 	/* Interrupt arrived, check src */
 	ctrl = imx_mu_read(IMX_MU_xCR);
 	val = imx_mu_read(IMX_MU_xSR);
+
+	__dsp_printf("irq_ahndler %x %x\n", ctrl, val);
 
 	tracev_ipc("ipc: irq isr 0x%x", val);
 
@@ -212,7 +217,9 @@ out:
 int platform_ipc_init(struct ipc *ipc)
 {
 	struct ipc_data *iipc;
+	int ret;
 	//uint32_t imrd, dir, caps, dev;
+	//struct mu_regs *base = (struct mu_regs *)MU_PADDR;
 
 	_ipc = ipc;
 
@@ -243,12 +250,16 @@ int platform_ipc_init(struct ipc *ipc)
 	iipc->pm_prepare_D3 = 0;
 #endif
 	/* configure interrupt */
+	ret = PLATFORM_IPC_INTERRUPT;
+	__dsp_printf("register interrupt %d\n", ret);
 	interrupt_register(PLATFORM_IPC_INTERRUPT, IRQ_AUTO_UNMASK,
 			   irq_handler, NULL);
 	interrupt_enable(PLATFORM_IPC_INTERRUPT);
 
+	//mu_enableinterrupt_gir(base, 0);
+
 	/* Unmask TIE and RIE interrupts */
-	imx_mu_xcr_rmw(IMX_MU_xCR_TIEn(0) | IMX_MU_xCR_RIEn(0), 0);
+	//imx_mu_xcr_rmw(IMX_MU_xCR_TIEn(0) | IMX_MU_xCR_RIEn(0), 0);
 	return 0;
 }
 
