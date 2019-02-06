@@ -47,6 +47,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 struct audio_data {
 	struct pipeline *p;
@@ -55,6 +57,8 @@ struct audio_data {
 int do_task_master_core(struct sof *sof)
 {
 	int ret;
+	__dsp_printf("do_task_master_core\n");
+
 #ifdef STATIC_PIPE
 	struct audio_data pdata;
 #endif
@@ -71,14 +75,18 @@ int do_task_master_core(struct sof *sof)
 	sys_comp_eq_iir_init();
 	sys_comp_eq_fir_init();
 
+	__dsp_printf("before pipeline\n");
 #if STATIC_PIPE
+	__dsp_printf("enterning static pipeline\n");
 	/* init static pipeline */
 	pdata.p = init_static_pipeline();
 	if (pdata.p == NULL)
 		panic(SOF_IPC_PANIC_TASK);
 #endif
+	__dsp_printf("Going to boot complete\n");
 	/* let host know DSP boot is complete */
 	ret = platform_boot_complete(0);
+	__dsp_printf("boot complete returned %d\n", ret);
 	if (ret < 0)
 		return ret;
 

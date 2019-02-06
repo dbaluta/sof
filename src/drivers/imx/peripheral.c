@@ -23,7 +23,53 @@
  *****************************************************************/
 
 #include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 #include <stdarg.h>
+
+
+/* Enable the specific receive interrupt */
+void mu_enableinterrupt_rx(struct mu_regs *regs, uint32_t idx)
+{
+	uint32_t reg_cr = (regs->MU_CR & ~MU_CR_GIRn_NMI_MASK);
+
+	regs->MU_CR = reg_cr | (MU_CR_RIE0_MASK >> idx);
+}
+
+#define MASK (1 << 19)
+/* Enable the specific GIR */
+void mu_enableinterrupt_gir(struct mu_regs *regs, uint32_t idx)
+{
+	uint32_t reg_cr;
+	
+	__dsp_printf("Before enable GIR %x\n", regs->MU_CR);
+
+	reg_cr = (regs->MU_CR & ~((MASK>>idx)));
+
+	regs->MU_CR = reg_cr | (MASK>>idx);
+
+	__dsp_printf("After enable GIR %x (%x) \n", regs->MU_CR, reg_cr);
+}
+
+/* Receive the message for specify registers */
+void mu_msg_receive(struct mu_regs *regs, uint32_t regidx, uint32_t *msg)
+{
+	uint32_t mask = MU_SR_RF0_MASK >> regidx;
+
+	while (!(regs->MU_SR & mask))
+		;
+
+	*msg = regs->MU_RR[regidx];
+}
+
+void mu_msg_send(struct mu_regs *regs, uint32_t regidx, uint32_t msg)
+{
+	uint32_t mask = MU_SR_TE0_MASK >> regidx;
+
+	while (!(regs->MU_SR & mask))
+		;
+
+	regs->MU_TR[regidx] = msg;
+}
 
 static void lpuart_putc(struct nxp_lpuart *base, const char c)
 {

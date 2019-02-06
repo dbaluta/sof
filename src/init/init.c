@@ -43,9 +43,16 @@
 #include <sof/schedule.h>
 #include <sof/dma-trace.h>
 #include <sof/pm_runtime.h>
+#include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 #include <sof/cpu.h>
 #include <platform/idc.h>
 #include <platform/platform.h>
+
+#define L(s) #s
+
+#undef trace_point
+#define trace_point(x) __dsp_printf(#x"\n")
 
 /* main firmware context */
 static struct sof sof;
@@ -88,9 +95,13 @@ int master_core_init(struct sof *sof)
 	return err;
 }
 
+#define trace_pint __dsp_printf
+
 int main(int argc, char *argv[])
 {
 	int err;
+
+	enable_log(&err);
 
 	trace_point(TRACE_BOOT_START);
 
@@ -98,10 +109,14 @@ int main(int argc, char *argv[])
 	sof.argc = argc;
 	sof.argv = argv;
 
-	if (cpu_get_id() == PLATFORM_MASTER_CORE_ID)
+
+	if (cpu_get_id() == PLATFORM_MASTER_CORE_ID) {
+		__dsp_printf("doing master core init\n");
 		err = master_core_init(&sof);
-	else
+		__dsp_printf("master core init returned %d\n", err);
+	} else {
 		err = slave_core_init(&sof);
+	}
 
 	/* should never get here */
 	panic(SOF_IPC_PANIC_TASK);
