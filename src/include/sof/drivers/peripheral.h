@@ -39,6 +39,7 @@
 #define MU_SR_RF0_MASK				(1U << 27U)
 #define MU_SR_TE0_MASK				(1U << 23U)
 #define MU_CR_RIE0_MASK				(1U << 27U)
+#define MU_CR_GIE0_MASK				(1U << 31U)
 
 #define XSHAL_MU13_SIDEB_BYPASS_PADDR 0x5D310000
 #define MU_PADDR  XSHAL_MU13_SIDEB_BYPASS_PADDR
@@ -51,7 +52,13 @@ struct mu_regs {
 };
 
 void mu_enableinterrupt_rx(struct mu_regs *regs, uint32_t idx);
+void mu_enableGIE(struct mu_regs *regs, uint32_t idx);
+void mu_disableGIE(struct mu_regs *regs, uint32_t idx);
+void mu_clearGIP(struct mu_regs *regs, uint32_t idx);
+void mu_triggerGIR(struct mu_regs *regs, uint32_t idx);
 void mu_enableinterrupt_gir(struct mu_regs *regs, uint32_t idx);
+
+
 void mu_msg_receive(struct mu_regs *regs, uint32_t regidx, uint32_t *msg);
 void mu_msg_send(struct mu_regs *regs, uint32_t regidx, uint32_t msg);
 

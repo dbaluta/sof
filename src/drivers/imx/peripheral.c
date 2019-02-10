@@ -26,6 +26,32 @@
 #include <sof/drivers/printf.h>
 #include <stdarg.h>
 
+void mu_enableGIE(struct mu_regs *regs, uint32_t idx)
+{
+	uint32_t reg_cr = (regs->MU_CR & ~MU_CR_GIRn_NMI_MASK);
+
+	regs->MU_CR = reg_cr | (MU_CR_GIE0_MASK >> idx);
+}
+
+void mu_disableGIE(struct mu_regs *regs, uint32_t idx)
+{
+	uint32_t reg_cr = (regs->MU_CR & ~MU_CR_GIRn_NMI_MASK);
+
+	regs->MU_CR = reg_cr & ~(MU_CR_GIE0_MASK >> idx);
+}
+
+#define GIP_MASK0 (1 << 31)
+#define GIP_MASK1 (1 << 30)
+
+void mu_clearGIP(struct mu_regs *regs, uint32_t idx)
+{
+	if (idx == 0)
+		regs->MU_SR |= GIP_MASK0;
+	else
+		regs->MU_SR |= GIP_MASK1;
+}
+
+
 
 /* Enable the specific receive interrupt */
 void mu_enableinterrupt_rx(struct mu_regs *regs, uint32_t idx)
