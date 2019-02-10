@@ -32,14 +32,7 @@
 #define __INCLUDE_CLOCK_MAP__
 
 static const struct freq_table cpu_freq[] = {
-	{25000000, 25000, 0x0},
-	{25000000, 25000, 0x1},
-	{50000000, 50000, 0x2},
-	{50000000, 50000, 0x3}, /* default */
-	{100000000, 100000, 0x4},
-	{200000000, 200000, 0x5},
-	{267000000, 267000, 0x6},
-	{343000000, 343000, 0x7},
+	{666000000, 666000, 0x0}, /* default */
 };
 
 static const struct freq_table ssp_freq[] = {

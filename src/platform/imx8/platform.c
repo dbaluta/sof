@@ -140,7 +140,21 @@ static const struct sof_ipc_window sram_window = {
 	},
 };
 
-struct timer *platform_timer;
+
+struct work_queue_timesource platform_generic_queue[] = {
+{
+	.timer = {
+		.id = TIMER0,
+		.irq = IRQ_NUM_TIMER0,
+	},
+	.clk = PLATFORM_WORKQ_CLOCK,
+	.timer_set = platform_timer_set,
+	.timer_clear = platform_timer_clear,
+	.timer_get = platform_timer_get,
+},
+};
+struct timer *platform_timer =
+	&platform_generic_queue[PLATFORM_MASTER_CORE_ID].timer;
 
 
 int platform_boot_complete(uint32_t boot_message)
@@ -178,7 +192,13 @@ int platform_boot_complete(uint32_t boot_message)
 
 int platform_init(struct sof *sof)
 {
-	ipc_init(sof);
+	clock_init();
+	init_system_workq(&platform_generic_queue[PLATFORM_MASTER_CORE_ID]);
 
+	platform_timer_start(platform_timer);
+	sa_init(sof);
+
+	clock_set_freq(CLK_CPU(cpu_get_id()), CLK_MAX_CPU_HZ);
+	ipc_init(sof);
 	return 0;
 }
