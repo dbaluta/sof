@@ -30,7 +30,7 @@
 
 #include <sof/sof.h>
 #include <sof/dai.h>
-#include <sof/ssp.h>
+#include <sof/esai.h>
 #include <sof/stream.h>
 #include <sof/audio/component.h>
 #include <platform/memory.h>
@@ -41,7 +41,31 @@
 #include <string.h>
 #include <config.h>
 
+static struct dai esai[] = {
+{
+	.type = SOF_DAI_IMX_ESAI,
+	.index = 0,
+	.plat_data = {
+		.base = ESAI_BASE,
+		.irq = 24, //IRQ_NUM_EXT_ESAI,
+		.fifo[SOF_IPC_STREAM_PLAYBACK] = {
+			.offset = 0, //ESAI_BASE + REG_ESAI_ETDR;
+		},
+	},
+	.ops = &esai_ops,
+},
+};
+
+static struct dai_type_info dti[] = {
+	{
+		.type = SOF_DAI_IMX_ESAI,
+		.dai_array = esai,
+		.num_dais = ARRAY_SIZE(esai)
+	},
+};
+
 int dai_init(void)
 {
+	dai_install(dti, ARRAY_SIZE(dti));
 	return 0;
 }

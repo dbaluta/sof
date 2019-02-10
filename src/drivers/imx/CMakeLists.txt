@@ -5,4 +5,5 @@ add_local_sources(sof
 	timer.c
 	peripheral.c
 	printf.c
+	esai.c
 )

@@ -221,7 +221,6 @@ out:
 int platform_ipc_init(struct ipc *ipc)
 {
 	struct ipc_data *iipc;
-	int ret;
 	struct mu_regs *base = (struct mu_regs *)MU_PADDR;
 
 	//uint32_t imrd, dir, caps, dev;
@@ -256,7 +255,6 @@ int platform_ipc_init(struct ipc *ipc)
 	iipc->pm_prepare_D3 = 0;
 #endif
 	/* configure interrupt */
-	ret = PLATFORM_IPC_INTERRUPT;
 	interrupt_register(PLATFORM_IPC_INTERRUPT, IRQ_AUTO_UNMASK,
 			   irq_handler, NULL);
 	interrupt_enable(PLATFORM_IPC_INTERRUPT);
