@@ -708,6 +708,8 @@ static int ipc_dma_trace_config(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(params, _ipc->comp_data);
 
+	/*XXX: return 0 for now on i.MX */
+	return 0;
 #ifdef CONFIG_SUECREEK
 	return 0;
 #endif
