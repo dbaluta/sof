@@ -41,9 +41,7 @@
 #define PLATFORM_NUM_DMACS	2
 #endif
 
-#define DMA_ID_DMAC0	0
-#define DMA_ID_DMAC1	1
-#define DMA_ID_DMAC2	2
+#define DMA_ID_EDMA0	0
 
 #define DMA_HANDSHAKE_SSP0_RX	0
 #define DMA_HANDSHAKE_SSP0_TX	1
