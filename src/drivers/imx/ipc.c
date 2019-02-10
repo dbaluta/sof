@@ -61,6 +61,7 @@ static void do_notify(void)
 {
 	uint32_t flags;
 	struct ipc_msg *msg;
+	struct mu_regs *base = (struct mu_regs *)MU_PADDR;
 
 	spin_lock_irq(&_ipc->lock, flags);
 	msg = _ipc->shared_ctx->dsp_msg;
@@ -82,6 +83,8 @@ static void do_notify(void)
 out:
 	spin_unlock_irq(&_ipc->lock, flags);
 
+	
+	mu_enableGIE(base, 1);
 	/* clear DONE bit - tell Host we have completed */
 	//shim_write(SHIM_IPCDH, shim_read(SHIM_IPCDH) & ~SHIM_IPCDH_DONE);
 
@@ -92,39 +95,43 @@ out:
 static void irq_handler(void *arg)
 {
 	uint32_t ctrl;
-	uint32_t val;
+	uint32_t status;
 	uint32_t msg = 0;
+	struct mu_regs *base = (struct mu_regs *)MU_PADDR;
 
 	/* Interrupt arrived, check src */
-	ctrl = imx_mu_read(IMX_MU_xCR);
-	val = imx_mu_read(IMX_MU_xSR);
+	ctrl = base->MU_CR;
+	status = base->MU_SR;
 
-	__dsp_printf("irq_ahndler %x %x\n", ctrl, val);
+	__dsp_printf("irq_ahndler %x %x\n", ctrl, status);
 
-	tracev_ipc("ipc: irq isr 0x%x", val);
+	tracev_ipc("ipc: irq isr 0x%x", status);
 
 	/* reply message(done) from host */
-	if (val & IMX_MU_xSR_TEn(0)) {
-
+	if (status & IMX_MU_xSR_GIPn(1)) {
+		__dsp_printf("GOT reply \n");
 		/* Mask TE interrupt before return */
-		imx_mu_xcr_rmw(0, IMX_MU_xCR_TIEn(0));
+		mu_disableGIE(base, 1);
+		mu_clearGIP(base, 1);
 		interrupt_clear(PLATFORM_IPC_INTERRUPT);
 		do_notify();
 	}
 
 	/* new message from host */
-	if (val & IMX_MU_xSR_RFn(0)) {
-
+	if (status & IMX_MU_xSR_GIPn(0)) {
+		__dsp_printf("GOT new message\n");
 		interrupt_clear(PLATFORM_IPC_INTERRUPT);
 
-		msg = imx_mu_read(IMX_MU_xRRn(0));
+		mu_disableGIE(base, 0);
+		mu_clearGIP(base, 0);
 
 		/* TODO: place message in Q and process later */
 		/* It's not Q ATM, may overwrite */
 		if (_ipc->host_pending) {
+			__dsp_printf("Dropping!\n");
 			trace_ipc_error("ipc: dropping msg 0x%x", msg);
 			trace_ipc_error(" isr 0x%x ctrl 0x%x ipcxh 0x%x",
-					val, ctrl);
+					status, ctrl);
 		} else {
 			_ipc->host_pending = 1;
 			ipc_schedule_process(_ipc);
@@ -138,7 +145,7 @@ void ipc_platform_do_cmd(struct ipc *ipc)
 	struct sof_ipc_reply reply;
 	//uint32_t ipcxh;
 	int32_t err;
-
+	struct mu_regs *base = (struct mu_regs *)MU_PADDR;
 
 	/* perform command and return any error */
 	err = ipc_cmd();
@@ -166,6 +173,9 @@ done:
 	/* unmask busy interrupt */
 //	shim_write(SHIM_IMRD, shim_read(SHIM_IMRD) & ~SHIM_IMRD_BUSY);
 
+
+	mu_enableGIE(base, 0);
+	mu_enableinterrupt_gir(base, 0);
 	// TODO: signal audio work to enter D3 in normal context
 	/* are we about to enter D3 ? */
 	if (iipc->pm_prepare_D3) {
@@ -218,6 +228,8 @@ int platform_ipc_init(struct ipc *ipc)
 {
 	struct ipc_data *iipc;
 	int ret;
+	struct mu_regs *base = (struct mu_regs *)MU_PADDR;
+
 	//uint32_t imrd, dir, caps, dev;
 	//struct mu_regs *base = (struct mu_regs *)MU_PADDR;
 
@@ -255,6 +267,9 @@ int platform_ipc_init(struct ipc *ipc)
 	interrupt_register(PLATFORM_IPC_INTERRUPT, IRQ_AUTO_UNMASK,
 			   irq_handler, NULL);
 	interrupt_enable(PLATFORM_IPC_INTERRUPT);
+
+	mu_enableGIE(base, 0);
+	mu_enableGIE(base, 1);
 
 	//mu_enableinterrupt_gir(base, 0);
 

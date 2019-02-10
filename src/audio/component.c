@@ -39,6 +39,8 @@
 #include <sof/audio/component.h>
 #include <sof/audio/pipeline.h>
 #include <uapi/ipc/topology.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 struct comp_data {
 	struct list_item list;		/* list of components */
@@ -78,16 +80,16 @@ struct comp_dev *comp_new(struct sof_ipc_comp *comp)
 	/* find the driver for our new component */
 	drv = get_drv(comp->type);
 	if (!drv) {
-		trace_comp_error("comp_new() error: driver not found, "
-				 "comp->type = %u", comp->type);
+		__dsp_printf("comp_new() error: driver not found, "
+				 "comp->type = %u\n", comp->type);
 		return NULL;
 	}
 
 	/* create the new component */
 	cdev = drv->ops.new(comp);
 	if (!cdev) {
-		trace_comp_error("comp_new() error: "
-				 "unable to create the new component");
+		__dsp_printf("comp_new() error: "
+				 "unable to create the new component\n");
 		return NULL;
 	}
 

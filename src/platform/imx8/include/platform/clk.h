@@ -37,28 +37,23 @@
 #define CLK_CPU(x)	(x)
 #define CLK_SSP		1
 
-#define CPU_DEFAULT_IDX		3
+#define CPU_DEFAULT_IDX		0
 #define SSP_DEFAULT_IDX		1
 
-#define CLK_DEFAULT_CPU_HZ	50000000
-#define CLK_MAX_CPU_HZ		343000000
+#define CLK_DEFAULT_CPU_HZ	666000000
+#define CLK_MAX_CPU_HZ		666000000
 
-#define NUM_CLOCKS	2
+#define NUM_CLOCKS	1
 
 static inline int clock_platform_set_cpu_freq(uint32_t cpu_freq_enc)
 {
-	/* set CPU frequency request for CCU */
-	io_reg_update_bits(SHIM_BASE + SHIM_FR_LAT_REQ, SHIM_FR_LAT_CLK_MASK,
-			   cpu_freq_enc);
-
-	/* send freq request to SC */
-	return ipc_pmc_send_msg(PMC_SET_LPECLK);
+	return 0;
 }
 
 static inline int clock_platform_set_ssp_freq(uint32_t ssp_freq_enc)
 {
-	/* send SSP freq request to SC */
-	return ipc_pmc_send_msg(ssp_freq_enc);
+	/* we don't even have SSP */
+	return 0;
 }
 
 #endif

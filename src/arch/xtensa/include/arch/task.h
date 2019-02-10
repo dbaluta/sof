@@ -43,6 +43,8 @@
 #include <platform/platform.h>
 #include <sof/debug.h>
 #include <sof/alloc.h>
+#include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 
 /** \brief IRQ task data. */
 struct irq_task {
@@ -104,6 +106,8 @@ static inline int task_set_data(struct task *task)
 	struct irq_task *irq_task;
 	uint32_t flags;
 
+	__dsp_printf("task set data %d\n", task->priority);
+
 	switch (task->priority) {
 #ifdef CONFIG_TASK_HAVE_PRIORITY_MEDIUM
 	case TASK_PRI_MED + 1 ... TASK_PRI_LOW:
@@ -130,8 +134,11 @@ static inline int task_set_data(struct task *task)
 		return -EINVAL;
 	}
 
+	irq_task = *task_irq_high_get();
+
 	dst = &irq_task->list;
 	spin_lock_irq(&irq_task->lock, flags);
+	__dsp_printf("task set data, task %x irq_task %x dst %x\n", task, irq_task, dst);
 	list_item_append(&task->irq_list, dst);
 	spin_unlock_irq(&irq_task->lock, flags);
 
@@ -154,10 +161,13 @@ static void _irq_task(void *arg)
 	spin_lock_irq(&irq_task->lock, flags);
 
 	interrupt_clear(irq_task->irq);
+	__dsp_printf("scheduled irq task %d irq_task %x\n", irq_task->irq, irq_task);
 
 	list_for_item_safe(clist, tlist, &irq_task->list) {
 
 		task = container_of(clist, struct task, irq_list);
+		__dsp_printf("... tring task %x, func %x state %d\n", task,
+			     task->func, task->state);
 		list_item_del(clist);
 
 		if (task->func && task->state == TASK_STATE_PENDING) {
@@ -170,6 +180,7 @@ static void _irq_task(void *arg)
 		/* run task without holding task lock */
 		spin_unlock_irq(&irq_task->lock, flags);
 
+		__dsp_printf("And now we run the task\n");
 		if (run_task)
 			task->func(task->data);
 
@@ -178,6 +189,7 @@ static void _irq_task(void *arg)
 	}
 
 	spin_unlock_irq(&irq_task->lock, flags);
+	__dsp_printf("IRQ task handler, out\n");
 }
 
 /**
@@ -195,6 +207,7 @@ static inline int arch_run_task(struct task *task)
 		return ret;
 
 	irq = task_get_irq(task);
+	__dsp_printf("arch run task, irq %d\n", irq);
 	interrupt_set(irq);
 
 	return 0;

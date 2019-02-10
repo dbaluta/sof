@@ -43,6 +43,8 @@
 #include <sof/audio/component.h>
 #include <sof/audio/pipeline.h>
 #include <sof/audio/buffer.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 /*
  * Components, buffers and pipelines all use the same set of monotonic ID
@@ -139,7 +141,7 @@ int ipc_comp_new(struct ipc *ipc, struct sof_ipc_comp *comp)
 	/* check whether component already exists */
 	icd = ipc_get_comp(ipc, comp->id);
 	if (icd != NULL) {
-		trace_ipc_error("ipc_comp_new() error: comp->id = %u",
+		__dsp_printf("ipc_comp_new() error: comp->id = %u\n",
 				comp->id);
 		return -EINVAL;
 	}
@@ -147,7 +149,7 @@ int ipc_comp_new(struct ipc *ipc, struct sof_ipc_comp *comp)
 	/* create component */
 	cd = comp_new(comp);
 	if (cd == NULL) {
-		trace_ipc_error("ipc_comp_new() error: component cd = NULL");
+		__dsp_printf("ipc_comp_new() error: component cd = NULL\n");
 		return -EINVAL;
 	}
 
@@ -299,14 +301,14 @@ int ipc_pipeline_new(struct ipc *ipc,
 	/* find the scheduling component */
 	icd = ipc_get_comp(ipc, pipe_desc->sched_id);
 	if (icd == NULL) {
-		trace_ipc_error("ipc_pipeline_new() error: cannot find the "
+		__dsp_printf("ipc_pipeline_new() error: cannot find the "
 				"scheduling component, pipe_desc->sched_id"
-				" = %u", pipe_desc->sched_id);
+				" = %u\n", pipe_desc->sched_id);
 		return -EINVAL;
 	}
 	if (icd->type != COMP_TYPE_COMPONENT) {
-		trace_ipc_error("ipc_pipeline_new() error: "
-				"icd->type != COMP_TYPE_COMPONENT");
+		__dsp_printf("ipc_pipeline_new() error: "
+				"icd->type != COMP_TYPE_COMPONENT\n");
 		return -EINVAL;
 	}
 

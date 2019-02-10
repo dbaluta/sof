@@ -40,7 +40,10 @@
 #include <sof/interrupt.h>
 #include <stdint.h>
 #include <errno.h>
+#include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 
+int __dsp_printf(char *fmt, ...);
 struct timer_data {
 	void (*handler2)(void *arg);
 	void *arg2;
@@ -168,6 +171,9 @@ uint64_t arch_timer_get_system(struct timer *timer)
 	time = ((uint64_t)high << 32) | low;
 
 	arch_interrupt_global_enable(flags);
+	
+	__dsp_printf("arch_timer_get_system timer %x high %d, low %d, time %d\n",
+		     timer, high, low, (uint32_t)time);
 
 	return time;
 }

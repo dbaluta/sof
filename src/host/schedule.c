@@ -59,6 +59,9 @@ void schedule_task(struct task *task, uint64_t start, uint64_t deadline)
 	list_item_prepend(&task->list, &sch->list);
 	task->state = TASK_STATE_QUEUED;
 
+	__dsp_printf("schedule task %x, start %d, deadline %d\n", task_func, (uint32_t)start,
+		     (uint32_t)deadline);
+
 	if (task->func)
 		task->func(task->data);
 
@@ -76,7 +79,7 @@ int scheduler_init(struct sof *sof)
 	return 0;
 }
 
-/* The following definitions are to satisfy libsof linker errors */
+/ The following definitions are to satisfy libsof linker errors */
 
 void schedule(void)
 {

@@ -43,6 +43,8 @@
 #include <platform/clk.h>
 #include <platform/platform.h>
 #include <limits.h>
+#include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 
 /*
  * Generic delayed work queue support.
@@ -491,6 +493,8 @@ static struct work_queue *work_new_queue(struct work_queue_timesource *ts)
 {
 	struct work_queue *queue;
 	uint32_t i;
+
+	__dsp_printf("work_new_queue, clk %d\n", ts->clk);
 
 	/* init work queue */
 	queue = rmalloc(RZONE_SYS, SOF_MEM_CAPS_RAM, sizeof(*queue));

@@ -68,6 +68,8 @@
 #include <config.h>
 #include <arch/gdb/init.h>
 #include <sof/gdb/gdb.h>
+#include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 
 #define iGS(x) ((x >> SOF_GLB_TYPE_SHIFT) & 0xf)
 #define iCS(x) ((x >> SOF_CMD_TYPE_SHIFT) & 0xfff)
@@ -537,13 +539,13 @@ static int ipc_dai_config(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(config, _ipc->comp_data);
 
-	trace_ipc("ipc: dai %d,%d -> config ", config.type,
+	__dsp_printf("ipc: dai %d,%d -> config\n", config.type,
 		  config.dai_index);
 
 	/* get DAI */
 	dai = dai_get(config.type, config.dai_index, 0 /* existing only */);
 	if (dai == NULL) {
-		trace_ipc_error("ipc: dai %d,%d not found",
+		__dsp_printf("ipc: dai %d,%d not found\n",
 				config.type, config.dai_index);
 		return -ENODEV;
 	}
@@ -708,6 +710,7 @@ static int ipc_dma_trace_config(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(params, _ipc->comp_data);
 
+	return 0;
 #ifdef CONFIG_SUECREEK
 	return 0;
 #endif
@@ -915,13 +918,13 @@ static int ipc_glb_tplg_comp_new(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(comp, _ipc->comp_data);
 
-	trace_ipc("ipc: pipe %d comp %d -> new (type %d)", comp.pipeline_id,
+	__dsp_printf("ipc: pipe %d comp %d -> new (type %d)\n", comp.pipeline_id,
 		  comp.id, comp.type);
 
 	/* register component */
 	ret = ipc_comp_new(_ipc, (struct sof_ipc_comp *)_ipc->comp_data);
 	if (ret < 0) {
-		trace_ipc_error("ipc: pipe %d comp %d creation failed %d",
+		__dsp_printf("ipc: pipe %d comp %d creation failed %d\n",
 				comp.pipeline_id, comp.id, ret);
 		return ret;
 	}
@@ -944,13 +947,13 @@ static int ipc_glb_tplg_buffer_new(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(ipc_buffer, _ipc->comp_data);
 
-	trace_ipc("ipc: pipe %d buffer %d -> new (0x%x bytes)",
+	__dsp_printf("ipc: pipe %d buffer %d -> new (0x%x bytes)\n",
 		  ipc_buffer.comp.pipeline_id, ipc_buffer.comp.id,
 		  ipc_buffer.size);
 
 	ret = ipc_buffer_new(_ipc, (struct sof_ipc_buffer *)_ipc->comp_data);
 	if (ret < 0) {
-		trace_ipc_error("ipc: pipe %d buffer %d creation failed %d",
+		__dsp_printf("ipc: pipe %d buffer %d creation failed %d\n",
 				ipc_buffer.comp.pipeline_id,
 				ipc_buffer.comp.id, ret);
 		return ret;
@@ -974,7 +977,7 @@ static int ipc_glb_tplg_pipe_new(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(ipc_pipeline, _ipc->comp_data);
 
-	trace_ipc("ipc: pipe %d -> new", ipc_pipeline.pipeline_id);
+	__dsp_printf("ipc: pipe %d -> new\n", ipc_pipeline.pipeline_id);
 
 	ret = ipc_pipeline_new(_ipc,
 			       (struct sof_ipc_pipe_new *)_ipc->comp_data);
@@ -1012,7 +1015,7 @@ static int ipc_glb_tplg_comp_connect(uint32_t header)
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(connect, _ipc->comp_data);
 
-	trace_ipc("ipc: comp sink %d, source %d  -> connect",
+	__dsp_printf("ipc: comp sink %d, source %d  -> connect\n",
 		  connect.sink_id, connect.source_id);
 
 	return ipc_comp_connect(_ipc,
@@ -1028,7 +1031,7 @@ static int ipc_glb_tplg_free(uint32_t header,
 	/* copy message with ABI safe method */
 	IPC_COPY_CMD(ipc_free, _ipc->comp_data);
 
-	trace_ipc("ipc: comp %d -> free", ipc_free.id);
+	__dsp_printf("ipc: comp %d -> free", ipc_free.id);
 
 	/* free the object */
 	ret = free_func(_ipc, ipc_free.id);
@@ -1077,14 +1080,15 @@ int ipc_cmd(void)
 	struct sof_ipc_cmd_hdr *hdr;
 	uint32_t type;
 
+	__dsp_printf("do cmd\n");
 	hdr = mailbox_validate();
 	if (hdr == NULL) {
 		trace_ipc_error("ipc: invalid IPC header.");
 		return -EINVAL;
 	}
-
 	type = (hdr->cmd & SOF_GLB_TYPE_MASK) >> SOF_GLB_TYPE_SHIFT;
 
+	__dsp_printf("do cmd, size %d cmd %x type %x\n", hdr->cmd, hdr->size, type);
 	switch (type) {
 	case iGS(SOF_IPC_GLB_REPLY):
 		return 0;
@@ -1101,6 +1105,7 @@ int ipc_cmd(void)
 	case iGS(SOF_IPC_GLB_DAI_MSG):
 		return ipc_glb_dai_message(hdr->cmd);
 	case iGS(SOF_IPC_GLB_TRACE_MSG):
+		__dsp_printf("It is a trace msg\n");
 		return ipc_glb_debug_message(hdr->cmd);
 	case iGS(SOF_IPC_GLB_GDB_DEBUG):
 		return ipc_glb_gdb_debug(hdr->cmd);
@@ -1260,11 +1265,13 @@ int ipc_process_msg_queue(void)
 
 void ipc_process_task(void *data)
 {
+	__dsp_printf("ipc_process_task pending %d\n", _ipc->host_pending);
 	if (_ipc->host_pending)
 		ipc_platform_do_cmd(_ipc);
 }
 
 void ipc_schedule_process(struct ipc *ipc)
 {
-	schedule_task(&ipc->ipc_task, 0, 100);
+	__dsp_printf("scheduling task\n");
+	schedule_task(&ipc->ipc_task, 0, 20000);
 }

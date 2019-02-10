@@ -43,6 +43,8 @@
 #include <config.h>
 #include <stdint.h>
 #include <limits.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 /* clock tracing */
 #define trace_clk(__e, ...) \
@@ -149,6 +151,8 @@ out:
 
 uint64_t clock_ms_to_ticks(int clock, uint64_t ms)
 {
+	__dsp_printf("clocks_ms_to_ticks clk %d, ticks_per_msec %d\n",
+		     clock, clk_pdata->clk[clock].ticks_per_msec);
 	return clk_pdata->clk[clock].ticks_per_msec * ms;
 }
 
@@ -164,6 +168,10 @@ void clock_init(void)
 		clk_pdata->clk[i].freq = cpu_freq[CPU_DEFAULT_IDX].freq;
 		clk_pdata->clk[i].ticks_per_msec =
 			cpu_freq[CPU_DEFAULT_IDX].ticks_per_msec;
+
+		__dsp_printf("clock init i = %d, freq %d ticks %d\n", i,
+			     clk_pdata->clk[i].freq, clk_pdata->clk[i].ticks_per_msec);
+
 		spinlock_init(&clk_pdata->clk[i].lock);
 	}
 

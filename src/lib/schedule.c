@@ -44,6 +44,8 @@
 #include <platform/clk.h>
 #include <sof/audio/component.h>
 #include <sof/task.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 struct schedule_data {
 	spinlock_t lock;
@@ -122,6 +124,10 @@ static inline struct task *edf_get_next(uint64_t current,
 		/* include the length of task in deadline calc */
 		deadline = task->deadline - task->max_rtime;
 
+		__dsp_printf("edf_get_next_task, deadline %d max_rtime %d deadline %d\n",
+			     (uint32_t)task->deadline, (uint32_t)task->max_rtime,
+			     (uint32_t)deadline);
+	
 		if (current < deadline) {
 			delta = deadline - current;
 
@@ -182,7 +188,7 @@ static struct task *schedule_edf(void)
 	uint32_t flags;
 
 	tracev_schedule("schedule_edf()");
-
+	__dsp_printf("schedule_edf()\n");
 	interrupt_clear(PLATFORM_SCHEDULE_IRQ);
 
 	while (!list_is_empty(&sch->list)) {
@@ -190,14 +196,16 @@ static struct task *schedule_edf(void)
 
 		/* get the current time */
 		current = platform_timer_get(platform_timer);
-
+		
 		/* get next task to be scheduled */
 		task = edf_get_next(current, NULL);
 		spin_unlock_irq(&sch->lock, flags);
-
 		/* any tasks ? */
 		if (!task)
 			return NULL;
+
+		__dsp_printf("edf_get_next %x, start %d current %d\n", task,
+			     task->start, current);
 
 		/* can task be started now ? */
 		if (task->start <= current) {
@@ -325,7 +333,8 @@ void schedule_task(struct task *task, uint64_t start, uint64_t deadline)
 	int need_sched;
 
 	need_sched = _schedule_task(task, start, deadline);
-
+	__dsp_printf("_schedule task, task %x, start %x deadline %d need sched %d\n",
+		     task, (uint32_t)start, (uint32_t)deadline, need_sched);
 	/* need to run scheduler if task not already running */
 	if (need_sched) {
 		/* rerun scheduler */
@@ -387,6 +396,7 @@ static void scheduler_run(void *unused)
 	struct task *future_task;
 
 	tracev_schedule("scheduler_run()");
+	__dsp_printf("scheduler_run()\n");
 
 	/* EDF is only scheduler supported atm */
 	future_task = schedule_edf();
@@ -404,7 +414,7 @@ void schedule(void)
 	uint32_t flags;
 
 	tracev_schedule("schedule()");
-
+	__dsp_printf("schedule()\n");
 	spin_lock_irq(&sch->lock, flags);
 
 	/* make sure we have a queued task in the list first before we
@@ -421,6 +431,7 @@ void schedule(void)
 
 	/* no task to schedule */
 	spin_unlock_irq(&sch->lock, flags);
+	__dsp_printf("No task to schedule, get out\n");
 	return;
 
 schedule:

@@ -41,7 +41,34 @@
 #include <string.h>
 #include <config.h>
 
+#if 0
+static struct dai esai[] = {
+{
+	.type = SOF_DAI_IMX_ESAI,
+	.index = 0,
+	.plat_data = {
+		.base = ESAI_BASE,
+		.irq = IRQ_NUM_EXT_ESAI,
+		.fifo[SOF_IPC_STREAM_PLAYBACK] = {
+			.offset = ESAI_BASE + REG_ESAI_ETDR;
+		},
+	},
+	.ops = &esai_ops,
+},
+};
+
+static struct dai_type_info dti[] = {
+	{
+		.type = SOF_DAI_IMX_ESAI,
+		.dai_array = esai,
+		.num_dais = ARRAY_SIZE(esai)
+	},
+};
+#endif
 int dai_init(void)
 {
+#if 0
+	dai_install(dti, ARRAY_SIZE(dti));
+#endif
 	return 0;
 }
