@@ -130,6 +130,8 @@ static inline int task_set_data(struct task *task)
 		return -EINVAL;
 	}
 
+	irq_task = *task_irq_high_get();
+
 	dst = &irq_task->list;
 	spin_lock_irq(&irq_task->lock, flags);
 	list_item_append(&task->irq_list, dst);
