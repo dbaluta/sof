@@ -115,13 +115,17 @@ static inline int task_set_data(struct task *task)
 	case TASK_PRI_MED:
 		irq_task = *task_irq_med_get();
 		break;
-#else
+#elif CONFIG_TASK_HAVE_PRIORITY_LOW
 	case TASK_PRI_MED ... TASK_PRI_LOW:
 		irq_task = *task_irq_low_get();
 		break;
 	case TASK_PRI_HIGH ... TASK_PRI_MED - 1:
 		irq_task = *task_irq_high_get();
 		break;
+#else
+	case TASK_PRI_HIGH ... TASK_PRI_LOW:
+	irq_task = *task_irq_high_get();
+	break;
 #endif
 	default:
 		trace_error(TRACE_CLASS_IRQ,
