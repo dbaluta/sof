@@ -37,6 +37,8 @@
 #include <platform/platcfg.h>
 #include <platform/shim.h>
 #include <platform/interrupt.h>
+#include <sof/drivers/peripheral.h>
+#include <sof/drivers/printf.h>
 
 struct sof;
 
@@ -162,8 +164,7 @@ static inline void platform_panic(uint32_t p)
 }
 
 /* Platform defined trace code */
-#define platform_trace_point(__x) \
-	mailbox_sw_reg_write(SRAM_REG_FW_TRACEP, (__x))
+#define platform_trace_point(__x) __dsp_printf(""##__x)
 
 extern struct timer *platform_timer;
 

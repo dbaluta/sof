@@ -115,7 +115,7 @@
 
 /* move to config.h */
 #define TRACE	1
-#define TRACEV	0
+#define TRACEV	1
 #define TRACEE	1
 #define TRACEM	0 /* send all trace messages to mbox and local trace buffer */
 
@@ -261,7 +261,7 @@ void trace_init(struct sof *sof);
 #define trace_value(x)		trace_event(0, "value %u", x)
 #define trace_value_atomic(x)	trace_event_atomic(0, "value %u", x)
 
-#define trace_point(x) platform_trace_point(x)
+#define trace_point(x) __dsp_printf(#x"\n")
 
 /* verbose tracing */
 #if TRACEV
