@@ -67,13 +67,9 @@ void mu_enableinterrupt_gir(struct mu_regs *regs, uint32_t idx)
 {
 	uint32_t reg_cr;
 	
-	__dsp_printf("Before enable GIR %x\n", regs->MU_CR);
-
 	reg_cr = (regs->MU_CR & ~((MASK>>idx)));
 
 	regs->MU_CR = reg_cr | (MASK>>idx);
-
-	__dsp_printf("After enable GIR %x (%x) \n", regs->MU_CR, reg_cr);
 }
 
 /* Receive the message for specify registers */
