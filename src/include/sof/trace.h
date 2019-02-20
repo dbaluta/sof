@@ -236,8 +236,7 @@ void trace_init(struct sof *sof);
 
 #define trace_event(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
 
-#define trace_event_atomic(class, format, ...) \
-	_trace_event_atomic_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__)
+#define trace_event_atomic(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
 
 #define trace_event_with_ids(class, id_0, id_1, format, ...)	\
 	_trace_event_with_ids(class, id_0, id_1, 1, format, ##__VA_ARGS__)
@@ -288,8 +287,10 @@ void trace_init(struct sof *sof);
 #define _trace_error_with_ids(class, id_0, id_1, has_ids, format, ...)	\
 	_log_message(_mbox, _atomic, LOG_LEVEL_CRITICAL, class, id_0,	\
 		     id_1, has_ids, format, ##__VA_ARGS__)
-#define trace_error(class, format, ...)					\
-	_trace_error_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__)
+
+
+#define trace_error(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
+
 #define trace_error_with_ids(class, id_0, id_1, format, ...)	\
 	_trace_error_with_ids(class, id_0, id_1, 1, format, ##__VA_ARGS__)
 #define trace_error_atomic(...) trace_error(__VA_ARGS__)
