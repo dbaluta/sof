@@ -43,6 +43,8 @@
 #include <platform/platform.h>
 #include <platform/timer.h>
 #include <uapi/user/trace.h>
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
 
 /* bootloader trace values */
 #define TRACE_BOOT_LDR_ENTRY		0x100
@@ -204,6 +206,7 @@ _TRACE_EVENT_NTH_DECLARE_GROUP(3)
  */
 _TRACE_EVENT_NTH_DECLARE_GROUP(4)
 
+
 #define _TRACE_EVENT_MAX_ARGUMENT_COUNT 4
 
 void trace_flush(void);
@@ -230,8 +233,9 @@ void trace_init(struct sof *sof);
  * image size. This way more elaborate log messages are possible and encouraged,
  * for better debugging experience, without worrying about runtime performance.
  */
-#define trace_event(class, format, ...) \
-	_trace_event_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__)
+
+#define trace_event(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
+
 #define trace_event_atomic(class, format, ...) \
 	_trace_event_atomic_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__)
 
