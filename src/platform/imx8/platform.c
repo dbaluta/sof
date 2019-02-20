@@ -32,6 +32,7 @@
 #include <platform/memory.h>
 #include <platform/mailbox.h>
 #include <platform/shim.h>
+#include <sof/edma.h>
 #include <platform/dma.h>
 #include <platform/dai.h>
 #include <platform/clk.h>
@@ -192,6 +193,9 @@ int platform_boot_complete(uint32_t boot_message)
 
 int platform_init(struct sof *sof)
 {
+	int ret;
+	struct dai *esai;
+
 	clock_init();
 	init_system_workq(&platform_generic_queue[PLATFORM_MASTER_CORE_ID]);
 
@@ -199,6 +203,24 @@ int platform_init(struct sof *sof)
 	sa_init(sof);
 
 	clock_set_freq(CLK_CPU(cpu_get_id()), CLK_MAX_CPU_HZ);
+
+	/* init DMA */
+	ret = edma_init();
+	if (ret < 0)
+		return -ENODEV;
+
+	/* initialize the host IPC mechanims */
 	ipc_init(sof);
+
+	ret = dai_init();
+	if (ret < 0)
+		return -ENODEV;
+
+	esai = dai_get(SOF_DAI_IMX_ESAI, 0, DAI_CREAT);
+	if (esai == NULL)
+		return -ENODEV;
+
+	dai_probe(esai);
+
 	return 0;
 }
