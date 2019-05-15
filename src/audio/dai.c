@@ -709,6 +709,9 @@ static int dai_config(struct comp_dev *dev, struct sof_ipc_dai_config *config)
 			dd->chan = DMA_CHAN_INVALID;
 		}
 		break;
+	case SOF_DAI_IMX_ESAI:
+		dev->frame_bytes = 4;
+		break;
 	default:
 		/* other types of DAIs not handled for now */
 		trace_dai_error_with_ids(dev, "dai_config() error: Handling of "
