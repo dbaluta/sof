@@ -160,6 +160,7 @@ int dma_copy_new(struct dma_copy *dc)
 		trace_dma_error("dma_copy_new() error: dc->chan < 0");
 		return dc->chan;
 	}
+	trace_dma("dma_copy_new() got DMA channel");
 
 	dc->complete.timeout = 100;	/* wait 100 usecs for DMA to finish */
 	dma_set_cb(dc->dmac, dc->chan, DMA_CB_TYPE_IRQ, dma_complete,

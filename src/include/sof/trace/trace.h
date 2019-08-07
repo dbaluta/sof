@@ -19,6 +19,9 @@ struct sof;
 #include <sof/drivers/printf.h>
 #include <sof/drivers/peripheral.h>
 
+#include <sof/drivers/printf.h>
+#include <sof/drivers/peripheral.h>
+
 /* bootloader trace values */
 #define TRACE_BOOT_LDR_ENTRY		0x100
 #define TRACE_BOOT_LDR_HPSRAM		0x110
@@ -185,12 +188,15 @@ void trace_init(struct sof *sof);
  * for better debugging experience, without worrying about runtime performance.
  */
 
-#define trace_event(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
-
-#define trace_event_atomic(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
+#define trace_event(class, format, ...) do {\
+	__dsp_printf(format "\n", ##__VA_ARGS__); \
+	_trace_event_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__); } while(0)
+#define trace_event_atomic(class, format, ...) \
+	_trace_event_atomic_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__)
 
 #define trace_event_with_ids(class, id_0, id_1, format, ...)	\
-	__dsp_printf(format"\n", ##__VA_ARGS__)
+	do { __dsp_printf(format "\n", ##__VA_ARGS__); \
+	_trace_event_with_ids(class, id_0, id_1, 1, format, ##__VA_ARGS__); } while(0)
 
 #define trace_event_atomic_with_ids(class, id_0, id_1, format, ...)	\
 	_trace_event_atomic_with_ids(class, id_0, id_1, 1, format,	\
@@ -213,7 +219,7 @@ void trace_init(struct sof *sof);
 #define trace_value(x)		trace_event(0, "value %u", x)
 #define trace_value_atomic(x)	trace_event_atomic(0, "value %u", x)
 
-#define trace_point(x) __dsp_printf(#x"\n")
+#define trace_point(x) platform_trace_point(x)
 
 /* verbose tracing */
 #if CONFIG_TRACEV
@@ -241,10 +247,12 @@ void trace_init(struct sof *sof);
 		     id_1, has_ids, format, ##__VA_ARGS__)
 
 
-#define trace_error(class, format, ...) __dsp_printf(format"\n", ##__VA_ARGS__)
+#define trace_error(class, format, ...) do {\
+	__dsp_printf(format "\n", ##__VA_ARGS__); \
+	_trace_error_with_ids(class, -1, -1, 0, format, ##__VA_ARGS__); }while(0)
 
-#define trace_error_with_ids(class, id_0, id_1, format, ...)	\
-	__dsp_printf(format"\n", ##__VA_ARGS__)
+#define trace_error_with_ids(class, id_0, id_1, format, ...)    \
+	_trace_error_with_ids(class, id_0, id_1, 1, format, ##__VA_ARGS__)
 
 #define trace_error_atomic(...) trace_error(__VA_ARGS__)
 #define trace_error_atomic_with_ids(...) trace_error_with_ids(__VA_ARGS__)

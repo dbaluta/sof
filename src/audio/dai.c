@@ -158,13 +158,20 @@ static struct comp_dev *dai_new(struct sof_ipc_comp *comp)
 
 	if (IPC_IS_SIZE_INVALID(ipc_dai->config)) {
 		IPC_SIZE_ERROR_TRACE(TRACE_CLASS_DAI, ipc_dai->config);
+		trace_dai_error("dai_new(), IPC size invalid");
 		return NULL;
 	}
 
+	tracev_dai("dai_new() after ipc size check");
+
 	dev = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM,
 		COMP_SIZE(struct sof_ipc_comp_dai));
-	if (!dev)
+	if (!dev) {
+		trace_dai_error("dai_new(), unable to allocate dev");
 		return NULL;
+	}
+
+	tracev_dai("dai_new() after dev alloc");
 
 	dai = (struct sof_ipc_comp_dai *)&dev->comp;
 	assert(!memcpy_s(dai, sizeof(*dai), ipc_dai,
@@ -172,13 +179,18 @@ static struct comp_dev *dai_new(struct sof_ipc_comp *comp)
 
 	dd = rzalloc(RZONE_RUNTIME, SOF_MEM_CAPS_RAM, sizeof(*dd));
 	if (!dd) {
+		trace_dai_error("dai_new(), unable to allocate dev data");
 		rfree(dev);
 		return NULL;
 	}
 
 	comp_set_drvdata(dev, dd);
 
-	return dev;
+	// return dev;
+	if (dai->type == SOF_DAI_IMX_SAI) {
+		trace_dai("dai_new() replace SAI by ESAI");
+		dai->type = SOF_DAI_IMX_ESAI;
+	}
 
 	dd->dai = dai_get(dai->type, dai->dai_index, DAI_CREAT);
 	if (!dd->dai) {
@@ -208,6 +220,7 @@ static struct comp_dev *dai_new(struct sof_ipc_comp *comp)
 	dd->chan = DMA_CHAN_INVALID;
 
 	dev->state = COMP_STATE_READY;
+	tracev_dai("dai_new() complete");
 	return dev;
 
 error:
@@ -368,6 +381,8 @@ static int dai_params(struct comp_dev *dev)
 	if (dev->state != COMP_STATE_READY) {
 		trace_dai_error_with_ids(dev, "dai_params() error: Component"
 					 " is not in init state.");
+		trace_dai_error_with_ids(dev, "dai_params() error: Expected %d actual %d",
+					 COMP_STATE_READY, dev->state);
 		return -EINVAL;
 	}
 
