@@ -109,6 +109,14 @@ static int edma_remove(struct dma *dma)
 	return 0;
 }
 
+static int edma_get_attribute(struct dma *dma, uint32_t type,
+			      uint32_t *value)
+{
+	*value = 4;
+
+	return 0;
+}
+
 const struct dma_ops edma_ops = {
 	.channel_get	= edma_channel_get,
 	.channel_put	= edma_channel_put,
@@ -123,4 +131,5 @@ const struct dma_ops edma_ops = {
 	.pm_context_store	= edma_pm_context_store,
 	.probe		= edma_probe,
 	.remove		= edma_remove,
+	.get_attribute	= edma_get_attribute,
 };
