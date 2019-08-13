@@ -17,6 +17,7 @@
 #define __SOF_LIB_DAI_H__
 
 #include <platform/lib/dai.h>
+#include <sof/lib/io.h>
 #include <sof/bit.h>
 #include <sof/spinlock.h>
 #include <errno.h>
@@ -233,6 +234,22 @@ static inline int dai_get_info(struct dai *dai, int info)
 	}
 
 	return ret;
+}
+
+static inline void dai_write(struct dai *dai, uint32_t reg, uint32_t value)
+{
+	io_reg_write(dai_base(dai) + reg, value);
+}
+
+static inline uint32_t dai_read(struct dai *dai, uint32_t reg)
+{
+	return io_reg_read(dai_base(dai) + reg);
+}
+
+static inline void dai_update_bits(struct dai *dai, uint32_t reg,
+				   uint32_t mask, uint32_t value)
+{
+	io_reg_update_bits(dai_base(dai) + reg, mask, value);
 }
 
 /** @}*/
