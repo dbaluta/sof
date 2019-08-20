@@ -25,8 +25,60 @@ static inline int esai_set_config(struct dai *dai,
 	return 0;
 }
 
-static int esai_trigger(struct dai *dai, int cmd, int direction)
+static void esai_start(struct dai *dai, int dir)
 {
+	/* dir FIFO enable */
+	dai_update_bits(dai, REG_ESAI_xFCR(dir), ESAI_xFCR_xFEN_MASK,
+			ESAI_xFCR_xFEN);
+
+
+	dai_update_bits(dai, REG_ESAI_xCR(dir),
+			dir ? ESAI_xCR_TE_MASK : ESAI_xCR_RE_MASK,
+			dir ? ESAI_xCR_TE(1) : ESAI_xCR_RE(1));
+
+	dai_update_bits(dai, REG_ESAI_xSMB(dir), ESAI_xSMB_xS_MASK,
+			ESAI_xSMB_xS(0x3));
+
+	dai_update_bits(dai, REG_ESAI_xSMA(dir), ESAI_xSMA_xS_MASK,
+			ESAI_xSMA_xS(0x3));
+
+	/* enable exception interrupt */
+	dai_update_bits(dai, REG_ESAI_xCR(dir), ESAI_xCR_xEIE_MASK,
+			ESAI_xCR_EIE);
+}
+
+static void esai_stop(struct dai *dai, int dir)
+{
+	/* disable exception interrupt */
+	dai_update_bits(dai, REG_ESAI_xCR(dir), ESAI_xCR_xEIE_MASK, 0);
+
+	dai_update_bits(dai, REG_ESAI_xSMA(dir), ESAI_xSMA_xS_MASK, 0);
+	dai_update_bits(dai, REG_ESAI_xSMB(dir), ESAI_xSMB_xS_MASK, 0);
+
+	dai_update_bits(dai, REG_ESAI_xCR(dir),
+			dir ? ESAI_xCR_TE_MASK : ESAI_xCR_RE_MASK, 0);
+
+	/* disable and reset FIFO */
+	dai_update_bits(dai, REG_ESAI_xFCR(dir), ESAI_xFCR_xFR | ESAI_xFCR_xFEN,
+			ESAI_xFCR_xFR);
+	dai_update_bits(dai, REG_ESAI_xFCR(dir), ESAI_xFCR_xFR, 0);
+}
+
+static int esai_trigger(struct dai *dai, int cmd, int dir)
+{
+	switch(cmd) {
+	case COMP_TRIGGER_START:
+	case COMP_TRIGGER_RELEASE:
+		esai_start(dai, dir);
+		break;
+	case COMP_TRIGGER_STOP:
+	case COMP_TRIGGER_PAUSE:
+		esai_stop(dai, dir);
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
