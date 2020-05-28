@@ -532,19 +532,21 @@ static int sdma_stop(struct dma_chan_data *channel)
 
 	channel->status = COMP_STATE_READY;
 
-	tr_dbg(&sdma_tr, "sdma_stop(%d)", channel->index);
+	tr_dbg(&sdma_tr, "sdma_stop(%d) ev %d", channel->index, pdata->hw_event);
 	if (pdata->hw_event != -1) {
 		/* For event driven channels, disable them from running by
 		 * setting HOSTOVR to 0. Manually controlled channels need not
 		 * be stopped as they will finish their transfer and stop on
 		 * their own.
 		 */
-		dma_reg_update_bits(channel->dma, SDMA_HOSTOVR,
+		dma_reg_update_bits(channel->dma, SDMA_EVTOVR,
 				    BIT(channel->index), 0);
-
 		/* Reset channel, making it ready to start over */
 		pdata->ccb->current_bd_paddr = pdata->ccb->base_bd_paddr;
+		dcache_writeback_region(pdata->ccb, sizeof(*pdata->ccb));
+#if 0
 		return sdma_upload_context(channel);
+#endif
 	}
 
 	return 0;
