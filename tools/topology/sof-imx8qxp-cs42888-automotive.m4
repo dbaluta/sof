@@ -96,6 +96,8 @@ SectionGraph."PIPE_NAME" {
 	]
 }
 
+PCM_PLAYBACK_ADD(Port5, 0, PIPELINE_PCM_1)
+
 dnl DAI_CONFIG(type, idx, link_id, name, esai_config)
 DAI_CONFIG(ESAI, 0, 0, esai0-cs42888,
 	ESAI_CONFIG(I2S, ESAI_CLOCK(mclk, 49152000, codec_mclk_in),
