@@ -139,6 +139,7 @@ set(TPLGS
 	"sof-smart-amplifier-nocodec\;sof-smart-amplifier-nocodec"
 	"sof-jsl-rt5682\;sof-jsl-rt5682-rt1015\;-DPLATFORM=jsl-rt1015"
 	"sof-jsl-rt5682\;sof-jsl-rt5682-mx98360a\;-DPLATFORM=jsl-dedede"
+	"sof-imx8-compr\;sof-imx8-compr\;-DPPROC=post-process"
 )
 
 add_custom_target(topologies ALL)
