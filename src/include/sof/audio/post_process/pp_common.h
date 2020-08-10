@@ -4,8 +4,12 @@
  *
  * Author: Marcin Rajwa <marcin.rajwa@linux.intel.com>
  */
+#ifndef __PP_COMMON__
+#define __PP_COMMON__
 
 #include <sof/audio/component.h>
+#include "xa_type_def.h"
+//#include "post_process.h"
 
 /*****************************************************************************/
 /* Post processing shared data						     */
@@ -26,17 +30,22 @@ struct post_process_shared_data {
 	uint32_t lib_in_buff_size;
 	void *lib_in_buff;
 	void *lib_out_buff;
+	bool lib_init;
 };
 
+struct comp_data;
 /*****************************************************************************/
 /* Post processing library public interfaces						     */
 /*****************************************************************************/
 int pp_get_lib_state(bool *state);
 int pp_init_lib(struct comp_dev *dev);
+int pp_set_proc_func(struct comp_dev *dev, int type);
 int pp_lib_set_config(struct comp_dev *dev, void *cfg);
 int pp_lib_prepare(struct comp_dev *dev,
 		   struct post_process_shared_data *sdata);
 int pp_lib_process_data(struct comp_dev *dev, size_t avail, size_t *produced);
+int pp_lib_process_init(struct comp_dev *dev, size_t avail, size_t *consumed);
 int pp_lib_load_runtime_config(struct comp_dev *dev, void *cfg, int size);
 int pp_lib_apply_runtime_config(struct comp_dev *dev);
 int pp_lib_get_max_blob_size(uint32_t *size);
+#endif

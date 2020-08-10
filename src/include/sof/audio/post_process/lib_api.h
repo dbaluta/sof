@@ -11,10 +11,13 @@
 #include <sof/audio/post_process/pp_common.h>
 #include <sof/audio/post_process/xa_apicmd_standards.h>
 #include <sof/audio/post_process/xa_dap_vlldp_api.h>
+#include <sof/audio/post_process/xa_mp3_dec_api.h>
 #include <sof/audio/post_process/xa_error_standards.h>
 #include <sof/audio/post_process/xa_memory_standards.h>
 #include <sof/audio/post_process/xa_type_def.h>
 #include <sof/audio/post_process/xa_type_def.h>
+
+#include "post_process.h"
 
 /*****************************************************************************/
 /* Generic API interface						     */
@@ -25,8 +28,8 @@
 #define MAX_NO_OF_CHANNELS 8
 #define LIB_NAME_MAX_LEN 30
 
-#define PP_LIB_API_CALL(cmd, sub_cmd, value) \
-	xa_dap_vlldp((pp_lib_data.self), (cmd), (sub_cmd), (value));\
+#define PP_LIB_API_CALL(pp_lib_data, cmd, sub_cmd, value) \
+	pp_lib_data.p_xa_process_api((pp_lib_data.xa_process_handle), (cmd), (sub_cmd), (value));\
 	if (ret != LIB_NO_ERROR) \
 		handle_error(dev, ret);
 #define PP_LIB_API_SET_CONFIG(XA_API_CMD_SET_CONFIG_PARAM, idx, pvalue, context_str) \
@@ -84,16 +87,23 @@ struct post_process_setup_config {
 };
 
 struct post_process_lib_data {
+	xa_codec_func_t *p_xa_process_api; /* decoder library API function */
+	xa_codec_handle_t xa_process_handle;
+
 	enum pp_lib_state state;
 	char name[LIB_NAME_MAX_LEN];
-	void *self;
+
 	void *mem_tabs;
 	void *in_buff;
 	void *out_buff;
 	size_t in_buff_size;
+	size_t in_buff_consumed;
+
 	size_t out_buff_size;
+
 	struct post_process_setup_config s_cfg;
 	struct post_process_runtime_config r_cfg;
+
 };
 
 #endif /* __SOF_AUDIO_PP_LIB_API__ */

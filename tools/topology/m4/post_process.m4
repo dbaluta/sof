@@ -30,7 +30,7 @@ define(`W_POST_PROCESS',
 `SectionVendorTuples."'N_POST_PROCESS($1)`_tuples_str_type" {'
 `	tokens "sof_process_tokens"'
 `	tuples."string" {'
-`		SOF_TKN_PROCESS_TYPE'	"EQIIR"
+`		SOF_TKN_PROCESS_TYPE'	"MP3"
 `	}'
 `}'
 `SectionData."'N_POST_PROCESS($1)`_data_str_type" {'

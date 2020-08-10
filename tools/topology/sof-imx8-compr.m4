@@ -58,7 +58,7 @@ dnl     deadline, priority, core, time_domain)
 # Buffers use s24le format, 1000us deadline on core 0 with priority 0
 DAI_ADD(sof/pipe-dai-playback.m4,
 	1, SAI, 1, sai1-wm8960-hifi,
-	PIPELINE_SOURCE_1, 2, s24le,
+	PIPELINE_SOURCE_1, 2, s32le,
 	1000, 0, 0, SCHEDULE_TIME_DOMAIN_TIMER)
 
 # PCM Low Latency, id 0

@@ -14,12 +14,12 @@ static inline void *allocate_lib_obj(size_t obj_size)
 
 	return rballoc(0, SOF_MEM_CAPS_RAM, obj_size);
 }
-
+#if 0
 static int validate_config(void) {
 	//TODO:
 	return 0;
 }
-
+#endif
 static void handle_error(struct comp_dev *dev, int error) {
 
 	switch (error) {
@@ -56,13 +56,29 @@ static void handle_error(struct comp_dev *dev, int error) {
 	}
 }
 
+int pp_set_proc_func(struct comp_dev *dev, int type) {
+	struct comp_data *cd = comp_get_drvdata(dev);
+
+	cd->pp_proc_func = xa_mp3_dec;
+
+	return 0;
+}
+
 int pp_init_lib(struct comp_dev *dev) {
 	int ret;
+
+
+///static struct post_process_lib_data pp_lib_data;
+
 	size_t lib_obj_size;
+///	struct comp_data *cd = comp_get_drvdata(dev);
 
-	comp_dbg(dev, "pp_init_lib() start");
+	comp_err(dev, "pp_init_lib() start");
+	
+	pp_lib_data.p_xa_process_api = xa_mp3_dec;
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_GET_LIB_ID_STRINGS,
+	ret = PP_LIB_API_CALL(pp_lib_data,
+			      XA_API_CMD_GET_LIB_ID_STRINGS,
 			      XA_CMD_TYPE_LIB_NAME,
 			      pp_lib_data.name);
 	if (ret != LIB_NO_ERROR) {
@@ -71,22 +87,25 @@ int pp_init_lib(struct comp_dev *dev) {
 		goto out;
 	}
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_GET_API_SIZE, 0, &lib_obj_size);
+	comp_err(dev, "pp_init_lib() name %x %x", (int)pp_lib_data.name[0],  (int)pp_lib_data.name[1]);
+
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_API_SIZE, 0, &lib_obj_size);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_init_lib() error %x: failed to get lib object size",
 			 ret);
 		goto out;
 	}
 
-	pp_lib_data.self = allocate_lib_obj(lib_obj_size);
-	if (!pp_lib_data.self) {
+	comp_err(dev, "pp_init_lib()size %d ", lib_obj_size);
+	pp_lib_data.xa_process_handle = allocate_lib_obj(lib_obj_size);
+	if (!pp_lib_data.xa_process_handle) {
 		comp_err(dev, "pp_init_lib() error: failed to allocate space for lib object");
 		goto out;
 	} else {
 		comp_dbg(dev, "pp_init_lib(): allocated space for lib object");
 	}
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_INIT,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT,
 			      XA_CMD_TYPE_INIT_API_PRE_CONFIG_PARAMS,
 			      NULL);
 	if (ret != LIB_NO_ERROR) {
@@ -110,12 +129,12 @@ int pp_lib_set_config(struct comp_dev *dev, void *cfg) {
 		       sizeof(struct post_process_setup_config));
 
 	assert(!ret);
-
+#if 0
 	ret = validate_config();
 	if (ret) {
 		comp_err(dev, "pp_set_config() error: validation of config failed");
 	}
-
+#endif
 	return ret;
 }
 
@@ -129,7 +148,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 	void *ptr;
 
 	/* calculate the size of all memory blocks required */
-	ret = PP_LIB_API_CALL(XA_API_CMD_INIT,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT,
 			      XA_CMD_TYPE_INIT_API_POST_CONFIG_PARAMS,
 			      NULL);
 	if (ret != LIB_NO_ERROR) {
@@ -139,7 +158,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 	}
 
 	/* Get number of memory tables */
-	ret = PP_LIB_API_CALL(XA_API_CMD_GET_N_MEMTABS, 0, &no_mem_tables);
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_N_MEMTABS, 0, &no_mem_tables);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "init_memory_tables() error %x: failed to get number of memory tables",
 			 ret);
@@ -148,7 +167,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 
 	/* Initialize each memory table */
 	for (i = 0; i < no_mem_tables; i++) {
-		ret = PP_LIB_API_CALL(XA_API_CMD_GET_MEM_INFO_TYPE, i,
+		ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_MEM_INFO_TYPE, i,
 				      &mem_type);
 		if (ret != LIB_NO_ERROR) {
 			comp_err(dev, "init_memory_tables() error %x: failed to get mem. type info of id %d out of %d",
@@ -156,7 +175,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 			goto err;
 		}
 
-		ret = PP_LIB_API_CALL(XA_API_CMD_GET_MEM_INFO_SIZE, i,
+		ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_MEM_INFO_SIZE, i,
 				      &mem_size);
 		if (ret != LIB_NO_ERROR) {
 			comp_err(dev, "init_memory_tables() error %x: failed to get mem. size for mem. type %d",
@@ -164,7 +183,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 			goto err;
 		}
 
-		ret = PP_LIB_API_CALL(XA_API_CMD_GET_MEM_INFO_ALIGNMENT, i,
+		ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_MEM_INFO_ALIGNMENT, i,
 				      &mem_alignment);
 		if (ret != LIB_NO_ERROR) {
 			comp_err(dev, "init_memory_tables() error %x: failed to get mem. alignment of mem. type %d",
@@ -180,7 +199,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 			goto err;
 		}
 
-		ret = PP_LIB_API_CALL(XA_API_CMD_SET_MEM_PTR, i, ptr);
+		ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_SET_MEM_PTR, i, ptr);
 		if (ret != LIB_NO_ERROR) {
 			comp_err(dev, "init_memory_tables() error %x: failed to set memory pointer for %d",
 				 ret, mem_type);
@@ -206,7 +225,7 @@ static int init_memory_tables(struct comp_dev *dev) {
 			goto err;
 		}
 
-		comp_dbg(dev, "init_memory_tables: allocated memory of %d bytes and alignment %d for mem. type %d",
+		comp_info(dev, "init_memory_tables: allocated memory of %d bytes and alignment %d for mem. type %d",
 			 mem_size, mem_alignment, mem_type);
 	}
 
@@ -224,12 +243,17 @@ static inline void *allocate_memtabs_container(size_t size) {
 int pp_lib_prepare(struct comp_dev *dev,
 		   struct post_process_shared_data *sdata)
 {
-	int ret, mem_tabs_size, lib_init_status;
+	int ret, mem_tabs_size;//, lib_init_status;
 
 	comp_dbg(dev, "pp_lib_prepare() start");
-
+#if 0
+	ret = PP_LIB_API_CALL(XA_API_CMD_INIT, XA_CMD_TYPE_INIT_API_PRE_CONFIG_PARAMS, NULL);
+	comp_err(dev," pre config params returned %d\n", ret);
+	comp_err(dev, "settign sample rate at %d\n", pp_lib_data.s_cfg.common.sample_rate);
+#endif
+#if 0
 	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
-			      XA_DAP_VLLDP_CONFIG_PARAM_SAMPLE_RATE,
+			      XA_MP3DEC_CONFIG_PARAM_SAMP_FREQ,
 			      &pp_lib_data.s_cfg.common.sample_rate);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_prepare() error %x: failed to set sample rate",
@@ -238,7 +262,7 @@ int pp_lib_prepare(struct comp_dev *dev,
 	}
 
 	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
-			      XA_DAP_VLLDP_CONFIG_PARAM_MAX_NUM_CHANNELS,
+			      XA_MP3DEC_CONFIG_PARAM_NUM_CHANNELS,
 			      &pp_lib_data.s_cfg.common.channels);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_prepare() error %x: failed to set max number of channels",
@@ -247,45 +271,15 @@ int pp_lib_prepare(struct comp_dev *dev,
 	}
 
 	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
-			      XA_DAP_VLLDP_CONFIG_PARAM_NUM_CHANNELS,
-			      &pp_lib_data.s_cfg.common.channels);
-	if (ret != LIB_NO_ERROR) {
-		comp_err(dev, "pp_lib_prepare() error %x: failed to set number of channels",
-			ret);
-		goto err;
-	}
-
-	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
-			      XA_DAP_VLLDP_CONFIG_PARAM_PCM_WDSZ,
+			      XA_MP3DEC_CONFIG_PARAM_PCM_WDSZ,
 			      &pp_lib_data.s_cfg.common.sample_width);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_prepare() error %x: failed to set sample width");
 		goto err;
 	}
-
-	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
-			      XA_DAP_VLLDP_CONFIG_PARAM_BLOCK_SIZE,
-			      &pp_lib_data.s_cfg.specific.block_size);
-	if (ret != LIB_NO_ERROR) {
-		comp_err(dev, "pp_lib_prepare() error %x: failed to set block size",
-			 ret);
-		goto err;
-	}
-	/* Set interleaved mode ON
-	 * (allows channels to be stored in the same buffer)
-	 * NOTE! This setting applies to both input and output buffers.
-	*/
-	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
-			      XA_DAP_VLLDP_CONFIG_PARAM_INTERLEAVED_MODE,
-			      &pp_lib_data.s_cfg.specific.interleaved_mode);
-	if (ret != LIB_NO_ERROR) {
-		comp_err(dev, "pp_lib_prepare() error %x: failed to set interleaved_mode",
-			 ret);
-		goto err;
-	}
-
+#endif
 	/* Allocate memory for the codec */
-	ret = PP_LIB_API_CALL(XA_API_CMD_GET_MEMTABS_SIZE,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_MEMTABS_SIZE,
 			      0,
 			      &mem_tabs_size);
 	if (ret != LIB_NO_ERROR) {
@@ -293,6 +287,7 @@ int pp_lib_prepare(struct comp_dev *dev,
 			 ret);
 		goto err;
 	}
+	comp_err(dev, "pp_lib_prepare memtab size %d\n", mem_tabs_size);
 
 	pp_lib_data.mem_tabs = allocate_memtabs_container(mem_tabs_size);
 	if (!pp_lib_data.mem_tabs) {
@@ -304,7 +299,7 @@ int pp_lib_prepare(struct comp_dev *dev,
 			 mem_tabs_size);
 	}
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_SET_MEMTABS_PTR, 0,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_SET_MEMTABS_PTR, 0,
 			      pp_lib_data.mem_tabs);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_prepare() error %x: failed to set memtabs",
@@ -318,23 +313,26 @@ int pp_lib_prepare(struct comp_dev *dev,
 			 ret);
 		goto err;
 	}
-
-	ret = PP_LIB_API_CALL(XA_API_CMD_INIT,
+#if 0
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT,
 			      XA_CMD_TYPE_INIT_PROCESS, NULL);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_prepare() error %x: failed to initialize codec",
 
 			 ret);
-		goto err;
+	//	goto err;
 	}
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_INIT, XA_CMD_TYPE_INIT_DONE_QUERY,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT, XA_CMD_TYPE_INIT_DONE_QUERY,
 			      &lib_init_status);
+	comp_err(dev, "pp_lib_done query done %d status %d",
+			 ret, lib_init_status);
+
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_prepare() error %x: failed to get lib init status",
 			 ret);
 		goto err;
-	}
+	}a
 	if (!lib_init_status) {
 		comp_err(dev, "pp_lib_prepare() error: lib has not been initiated properly");
 		ret = -EINVAL;
@@ -342,32 +340,63 @@ int pp_lib_prepare(struct comp_dev *dev,
 	} else {
 		comp_dbg(dev, "pp_lib_prepare(): lib has been initialized properly");
 	}
-
-
+#endif
 	/* Share lib buffer data with post processing component */
 	sdata->lib_in_buff = pp_lib_data.in_buff;
 	sdata->lib_out_buff = pp_lib_data.out_buff;
 	sdata->lib_in_buff_size = pp_lib_data.in_buff_size;
 
 	pp_lib_data.state = PP_LIB_PREPARED;
-
+	
+///	return -EINVAL;
 	return 0;
 err:
+//	return -EINVAL;
 	return ret;
+
 }
 
+
+
+int pp_lib_process_init(struct comp_dev *dev, size_t avail, size_t *consumed)
+{
+	int ret = 0, init_done;
+
+	comp_err(dev, "xxx: avaiil %d", avail);
+
+	if (!avail) {
+		PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INPUT_OVER, 0, NULL);
+	}
+
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_SET_INPUT_BYTES, 0, &avail);
+	if (ret != LIB_NO_ERROR) {
+		comp_err(dev, "pp_lib_process_init() error %x: failed to set size of input data",
+			 ret);
+	}
+	
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT, XA_CMD_TYPE_INIT_PROCESS, NULL);
+	comp_err(dev, "error init process ret = %d", ret);
+
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT, XA_CMD_TYPE_INIT_DONE_QUERY, &init_done);
+	comp_err(dev, "error query process ret = %d init done %d", ret, init_done);
+
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_CURIDX_INPUT_BUF, 0, consumed);
+	comp_err(dev, "error init process ret = %d consumed %d", ret, *consumed);
+
+	return init_done;
+}
 
 int pp_lib_process_data(struct comp_dev *dev, size_t avail, size_t *produced) {
 	int ret;
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_SET_INPUT_BYTES, 0, &avail);
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_SET_INPUT_BYTES, 0, &avail);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_process_data() error %x: failed to set size of input data",
 			 ret);
 		goto err;
 	}
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_EXECUTE, XA_CMD_TYPE_DO_EXECUTE,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_EXECUTE, XA_CMD_TYPE_DO_EXECUTE,
 			      NULL);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_process_data() error %x: processing failed",
@@ -375,7 +404,7 @@ int pp_lib_process_data(struct comp_dev *dev, size_t avail, size_t *produced) {
 		goto err;
 	}
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_GET_OUTPUT_BYTES, 0, produced);
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_OUTPUT_BYTES, 0, produced);
 	if (ret != LIB_NO_ERROR) {
 		comp_err(dev, "pp_lib_process_data() error %x: could not get produced bytes",
 			 ret);
@@ -410,7 +439,7 @@ static int apply_general_config(struct comp_dev *dev) {
 	/* Set system gain */
 	comp_dbg(dev, "RAJWA: applying system gain of %d",cfg->system_gain);
 
-	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_SET_CONFIG_PARAM,
 			      XA_DAP_VLLDP_CONFIG_PARAM_SYSTEM_GAIN,
 			      &cfg->system_gain);
 	if (ret != LIB_NO_ERROR) {
@@ -418,7 +447,7 @@ static int apply_general_config(struct comp_dev *dev) {
 			 ret);
 		goto end;
 	}
-
+#if 0
 	/* Set post gain */
 	ret = PP_LIB_API_CALL(XA_API_CMD_SET_CONFIG_PARAM,
 			      XA_DAP_VLLDP_CONFIG_PARAM_POSTGAIN,
@@ -487,7 +516,7 @@ static int apply_general_config(struct comp_dev *dev) {
 		comp_err(dev, "apply_general_config() error %x: failed to set isolated bands",
 			 ret);
 	}
-
+#endif
 end:
 	return ret;
 

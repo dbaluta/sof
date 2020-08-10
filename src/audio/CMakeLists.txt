@@ -69,6 +69,9 @@ if(NOT CONFIG_LIBRARY)
 	if(CONFIG_COMP_ASRC)
 		add_subdirectory(asrc)
 	endif()
+
+	add_subdirectory(post_process)
+	
 	return()
 endif()
 

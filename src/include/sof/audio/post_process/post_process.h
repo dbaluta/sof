@@ -5,6 +5,8 @@
  * Author: Marcin Rajwa <marcin.rajwa@linux.intel.com>
  */
 
+#ifndef __SOF_POST_PROCESS__
+#define __SOF_POST_PROCESS__
 #include <sof/audio/post_process/pp_common.h>
 
 #define PP_SETUP_CONFIG		0
@@ -26,6 +28,7 @@ struct comp_data {
 	struct comp_buffer *pp_source;
 	bool lib_r_cfg_avail;
 	void *pp_lib_runtime_config;
+	xa_codec_func_t *pp_proc_func;
 };
 
 static  inline int validate_config(struct post_process_config *cfg)
@@ -34,3 +37,5 @@ static  inline int validate_config(struct post_process_config *cfg)
 	return 0;
 }
 
+
+#endif /*__SOF_POST_PROCESS__ */

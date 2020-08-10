@@ -34,7 +34,27 @@
 #include <stdint.h>
 #include <user/trace.h>
 
+
+void *__vec_memcpy(void *dst, const void *src, size_t len);
+
+/* XXXX: how to handle this? */
+void *__vec_memcpy(void *dst, const void *src, size_t len)
+{
+	return memcpy(dst, src, len);
+}
+
+void *__vec_memset(void *dest, int data, size_t src_size);
+
+void *__vec_memset(void *dest, int data, size_t src_size)
+{
+       	return memset(dest, data, src_size);                                                                                                  
+}
+
 static const struct comp_driver comp_post_process;
+
+/* 5150c0e6-27f9-4ec8-8351-c705b642d12f */
+DECLARE_SOF_RT_UUID("post-process", post_process_uuid, 0x5150c0e6, 0x27f9, 0x4ec8, 0x83, 0x51, 0xc7, 0x05, 0xb6, 0x42, 0xd1, 0x42);
+DECLARE_TR_CTX(pp_tr, SOF_UUID(post_process_uuid), LOG_LEVEL_INFO);
 
 /* Private functions declarations */
 
@@ -43,16 +63,15 @@ static struct comp_dev *post_process_new(const struct comp_driver *drv,
 {
 	int ret;
 	struct comp_dev *dev;
-	struct sof_ipc_comp_process *ipc_post_process =
-		(struct sof_ipc_comp_process *)comp;
+	struct sof_ipc_comp_process *ipc_post_process = (struct sof_ipc_comp_process *)comp;
 	struct comp_data *cd;
-	struct post_process_config *cfg = &cd->pp_config;
+	struct post_process_config *cfg;
 	size_t bs;
 
-	comp_cl_info(&comp_post_process, "post_process_new()");
+	comp_cl_info(&comp_post_process, "post_process_new() id = %d type = %d subtype %d",
+		     comp->id, comp->type, ipc_post_process->type);
 
-	dev = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
-		      COMP_SIZE(struct sof_ipc_comp_process));
+	dev = comp_alloc(drv, COMP_SIZE(struct sof_ipc_comp_process));
 	if (!dev) {
 		comp_cl_err(&comp_post_process, "post_process_new(), failed to allocate memory for comp_dev");
 		return NULL;
@@ -72,7 +91,10 @@ static struct comp_dev *post_process_new(const struct comp_driver *drv,
 		return NULL;
 	}
 
+	cfg = &cd->pp_config;
 	comp_set_drvdata(dev, cd);
+
+	//pp_set_proc_func(dev, 0);
 
 	/* Init post processing lib */
         ret = pp_init_lib(dev);
@@ -81,11 +103,18 @@ static struct comp_dev *post_process_new(const struct comp_driver *drv,
 			 ret);
         }
 
+	comp_cl_info(&comp_post_process, "comp_inti lib returned = %d\n", ret);
 	/* Load post processing runtime config from the topology. */
 	//TODO: if you return below, free allocated cd and dev!~!!!
-	cfg = (struct post_process_config *)ipc_post_process->data;
+	//cfg = (struct post_process_config *)ipc_post_process->data;
 	bs = ipc_post_process->size;
-	comp_cl_info(&comp_post_process, "RAJWA: size of config data is %d", bs);
+	cfg->sample_rate = 48000;
+	cfg->sample_width = 32;
+	cfg->channels =2;
+	//bs = 2;
+	comp_cl_info(&comp_post_process, "RAJWA: size of config data is %d type %d",
+		     bs, ipc_post_process->type);
+#if 0
 	if (bs) {
 		if (bs < sizeof(struct post_process_config)) {
 			comp_info(dev, "post_process_new() error: wrong size of post processing config");
@@ -94,6 +123,11 @@ static struct comp_dev *post_process_new(const struct comp_driver *drv,
 		ret = memcpy_s(&cd->pp_config, sizeof(cd->pp_config), cfg,
 			       sizeof(struct post_process_config));
 		assert(!ret);
+#endif
+		cd->pp_config.sample_rate = 48000;
+		cd->pp_config.sample_width = 32;
+		cd->pp_config.channels = 2;
+	
 		comp_cl_info(&comp_post_process, "RAJWA: sample rate: %d width %d, channels %d",
 			cd->pp_config.sample_rate,
 			cd->pp_config.sample_width,
@@ -114,12 +148,12 @@ static struct comp_dev *post_process_new(const struct comp_driver *drv,
 		} else {
 			comp_info(dev, "post_process_new() lib conffig set successfully");
 		}
-
+#if 0
 	} else {
 		comp_err(dev, "post_process_new(): no configuration available");
 		return NULL;
 	}
-
+#endif
 	dev->state = COMP_STATE_READY;
         cd->state = PP_STATE_CREATED;
 
@@ -313,6 +347,7 @@ static void post_process_copy_to_lib(const struct audio_stream *source,
 	}
 }
 
+
 static void post_process_copy_from_lib_to_sink(void *source, struct audio_stream *sink,
 			      size_t size)
 {
@@ -353,6 +388,55 @@ static void post_process_copy_from_lib_to_sink(void *source, struct audio_stream
 	}
 }
 
+
+static int post_process_init(struct comp_dev *dev)
+{
+	int ret;
+	uint32_t copy_bytes, bytes_to_process, consumed = 0, processed = 0;
+	struct comp_data *cd = comp_get_drvdata(dev);
+	struct comp_buffer *source = cd->pp_source;
+        uint32_t lib_buff_size = cd->sdata.lib_in_buff_size;
+	bool lib_init = 0;
+
+	/*TODO: recognize if error was FATAL or non fatal end react accoringly */
+
+        comp_err(dev, "post_process_init() start buf lib  %d avail %d", lib_buff_size, source->stream.avail);
+
+	/* lib proces already inited nothing to do */
+	if (lib_init)
+		return 0;
+
+        bytes_to_process = source->stream.avail;
+	copy_bytes = MIN(bytes_to_process, lib_buff_size);
+	comp_err(dev, "copy_bytes() %d\n", copy_bytes);
+
+	while (bytes_to_process) {
+		comp_err(dev, "Avail %d, bytes to process = %d ... consuemd = %d",
+			 bytes_to_process, copy_bytes, consumed);
+
+		/* Fill lib buffer completely. NOTE! If you don't fill whole buffer
+		 * the lib will not process the buffer!
+		 */
+		post_process_copy_to_lib(&source->stream,
+					 cd->sdata.lib_in_buff, lib_buff_size);
+
+		ret = pp_lib_process_init(dev, lib_buff_size, &consumed);
+		comp_err(dev, "lib init returned ret = %d consumed = %d", ret, consumed);
+	
+		if (ret) {
+			comp_err(dev, "post_process_copy() error %x: lib processing failed",
+				 ret);
+		}
+
+		bytes_to_process -= consumed;
+		processed += consumed;
+	}
+
+       comp_update_buffer_consume(source, consumed);
+
+	return 0;
+}
+
 static int post_process_copy(struct comp_dev *dev)
 {
 	int ret;
@@ -365,8 +449,11 @@ static int post_process_copy(struct comp_dev *dev)
 
         comp_dbg(dev, "post_process_copy() start");
 
+	post_process_init(dev);
+
         bytes_to_process = MIN(sink->stream.free, source->stream.avail);
 	copy_bytes = MIN(bytes_to_process, lib_buff_size);
+	comp_dbg(dev, "copy_bytes() %d\n", copy_bytes);
 
 	while (bytes_to_process) {
 		if (bytes_to_process < lib_buff_size) {
@@ -408,7 +495,8 @@ static int post_process_copy(struct comp_dev *dev)
        comp_update_buffer_consume(source, processed);
 
 end:
-	return 0;
+	return -EINVAL;
+
 }
 
 
@@ -581,6 +669,8 @@ static int post_process_cmd(struct comp_dev *dev, int cmd, void *data,
 
 static const struct comp_driver comp_post_process = {
 	.type = SOF_COMP_POST_PROCESS,
+	.uid = SOF_RT_UUID(post_process_uuid),
+	.tctx = &pp_tr,
 	.ops = {
 		.create = post_process_new,
 		.free = post_process_free,

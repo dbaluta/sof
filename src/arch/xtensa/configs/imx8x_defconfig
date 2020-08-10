@@ -1,2 +1,8 @@
 CONFIG_IMX8X=y
 CONFIG_HAVE_AGENT=n
+
+CONFIG_TRACE=y                                                                                                                                
+CONFIG_TRACEV=y
+CONFIG_TRACEE=y
+CONFIG_TRACEM=y
+

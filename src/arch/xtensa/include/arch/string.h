@@ -41,6 +41,17 @@ void *__vec_memcpy(void *dst, const void *src, size_t len);
 void *__vec_memset(void *dest, int data, size_t src_size);
 #endif
 
+#if 0
+/* XXXX: how to handle this? */
+static inline void *__vec_memcpy(void *dst, const void *src, size_t len)
+{
+	return memcpy(dst, src, len);
+}
+static inline void *__vec_memset(void *dest, int data, size_t src_size)
+{
+	return memset(dest, data, src_size);
+}
+#endif
 static inline int arch_memcpy_s(void *dest, size_t dest_size,
 				const void *src, size_t src_size)
 {
