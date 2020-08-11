@@ -20,40 +20,18 @@ static int validate_config(void) {
 	return 0;
 }
 #endif
-static void handle_error(struct comp_dev *dev, int error) {
+static void handle_error(struct comp_dev *dev, int code) {
+	WORD is_fatal     = XA_ERROR_SEVERITY(code) != 0;
+	WORD err_class    = XA_ERROR_CLASS(code);
+	WORD err_sub_code = XA_ERROR_SUBCODE(code);
 
-	switch (error) {
-	case XA_DAP_VLLDP_API_FATAL_INVALID_API_SEQ:
-		comp_err(dev, "pp_lib_error %x: fatal, wrong sequence of operations",
-                            error);
-	break;
-	case XA_DAP_VLLDP_API_NONFATAL_INVALID_API_SEQ:
-		comp_err(dev, "pp_lib_error %x: wrong sequence of operations",
-                            error);
-	break;
-	case XA_API_FATAL_MEM_ALLOC:
-		comp_err(dev, "pp_lib_error %x: fatal, memory allocation issue",
-                            error);
-	break;
-	case XA_API_FATAL_MEM_ALIGN:
-		comp_err(dev, "pp_lib_error %x: fatal, memory alignment issue",
-                            error);
-	break;
-	case XA_API_FATAL_INVALID_CMD:
-		comp_err(dev, "pp_lib_error %x: fatal, unknown command",
-                            error);
-	break;
-	case XA_API_FATAL_INVALID_CMD_TYPE:
-		comp_err(dev, "pp_lib_error %x: fatal, wrong command subtype or index (i_idx)",
-                            error);
-	break;
-	case XA_DAP_VLLDP_EXECUTE_NONFATAL_INSUFFICIENT_DATA:
-		comp_err(dev, "pp_lib_error %x: insufficient amount of data in the input buffer",
-                            error);
-	break;
-	default:
-		comp_err(dev, "pp_lib_error %x: unknown error", error);
-	}
+	if (code == XA_NO_ERROR)
+		return;
+	
+	comp_err(dev, "handle_erorr %x: ", code);
+	comp_err(dev, "handle_eror is_fatal %d err_clase %d err_sub_code %d",
+		 is_fatal, err_class, err_sub_code);
+
 }
 
 int pp_set_proc_func(struct comp_dev *dev, int type) {
