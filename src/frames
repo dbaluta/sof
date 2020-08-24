@@ -1,0 +1,337 @@
+audio/asrc/asrc.c:	dev->state = COMP_STATE_READY;
+audio/asrc/asrc.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/asrc/asrc.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/asrc/asrc.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/asrc/asrc.c:	cd->sink_frames = dev->frames;
+audio/asrc/asrc.c:	cd->source_frames = ceil_divide(dev->frames * cd->source_rate,
+audio/asrc/asrc.c:			sinkb = list_first_item(&next_dev->bsink_list,
+audio/asrc/asrc.c:			sourceb = list_first_item(&next_dev->bsource_list,
+audio/asrc/asrc.c:		ret = cd->dai_dev->drv->ops.dai_ts_config(cd->dai_dev);
+audio/asrc/asrc.c:		ret = cd->dai_dev->drv->ops.dai_ts_start(cd->dai_dev);
+audio/asrc/asrc.c:		ret = cd->dai_dev->drv->ops.dai_ts_stop(cd->dai_dev);
+audio/asrc/asrc.c:	return cd->dai_dev->drv->ops.dai_ts_get(cd->dai_dev, tsd);
+audio/asrc/asrc.c:	sourceb = list_first_item(&dev->bsource_list,
+audio/asrc/asrc.c:	sinkb = list_first_item(&dev->bsink_list,
+audio/asrc/asrc.c:	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/asrc/asrc.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/component.c:	list_init(&cdev->bsource_list);
+audio/component.c:	list_init(&cdev->bsink_list);
+audio/component.c: * sof-docs/developer_guides/firmware/components/images/comp-dev-states.pu
+audio/component.c:	if (dev->state == requested_state) {
+audio/component.c:			  dev->state);
+audio/component.c:		if (dev->state == COMP_STATE_PREPARE) {
+audio/component.c:			dev->state = COMP_STATE_ACTIVE;
+audio/component.c:				 dev->state);
+audio/component.c:		if (dev->state == COMP_STATE_PAUSED) {
+audio/component.c:			dev->state = COMP_STATE_ACTIVE;
+audio/component.c:				 dev->state);
+audio/component.c:		if (dev->state == COMP_STATE_ACTIVE ||
+audio/component.c:		    dev->state == COMP_STATE_PAUSED) {
+audio/component.c:			dev->state = COMP_STATE_PREPARE;
+audio/component.c:				 dev->state);
+audio/component.c:		dev->state = COMP_STATE_READY;
+audio/component.c:		if (dev->state == COMP_STATE_ACTIVE) {
+audio/component.c:			dev->state = COMP_STATE_PAUSED;
+audio/component.c:				 dev->state);
+audio/component.c:		if (dev->state == COMP_STATE_ACTIVE ||
+audio/component.c:		    dev->state == COMP_STATE_PAUSED) {
+audio/component.c:				 dev->state);
+audio/component.c:		dev->state = COMP_STATE_READY;
+audio/component.c:		if (dev->state == COMP_STATE_READY) {
+audio/component.c:			dev->state = COMP_STATE_PREPARE;
+audio/component.c:				 dev->state);
+audio/component.c:	int dir = dev->direction;
+audio/component.c:			buf = list_first_item(&dev->bsource_list,
+audio/component.c:			buf = list_first_item(&dev->bsink_list,
+audio/component.c:		sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/component.c:	struct list_item *old_bsource_list = &dev->bsource_list;
+audio/component.c:	struct list_item *old_bsink_list = &dev->bsink_list;
+audio/component.c:	dcache_writeback_region(dev, dev->size);
+audio/component.c:	dev = platform_shared_get(dev, dev->size);
+audio/component.c:	list_relink(&dev->bsource_list, old_bsource_list);
+audio/component.c:	list_relink(&dev->bsink_list, old_bsink_list);
+audio/component.c:	dev->is_shared = true;
+audio/dai.c:	if (dev->state != COMP_STATE_ACTIVE || dd->xrun) {
+audio/dai.c:		dai_trigger(dd->dai, COMP_TRIGGER_STOP, dev->direction);
+audio/dai.c:		if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
+audio/dai.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/dai.c:	dev->position += bytes;
+audio/dai.c:	dev->state = COMP_STATE_READY;
+audio/dai.c:	config->irq_disabled = pipeline_is_timer_driven(dev->pipeline);
+audio/dai.c:	config->dest_dev = dai_get_handshake(dd->dai, dev->direction,
+audio/dai.c:	config->period = dev->pipeline->ipc_pipe.period;
+audio/dai.c:		fifo = dai_get_fifo(dd->dai, dev->direction,
+audio/dai.c:	config->irq_disabled = pipeline_is_timer_driven(dev->pipeline);
+audio/dai.c:	config->src_dev = dai_get_handshake(dd->dai, dev->direction,
+audio/dai.c:	config->period = dev->pipeline->ipc_pipe.period;
+audio/dai.c:		fifo = dai_get_fifo(dd->dai, dev->direction,
+audio/dai.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
+audio/dai.c:		dd->local_buffer = list_first_item(&dev->bsource_list,
+audio/dai.c:		dd->local_buffer = list_first_item(&dev->bsink_list,
+audio/dai.c:	if (dev->state == COMP_STATE_PREPARE) {
+audio/dai.c:	if (dev->state != COMP_STATE_READY) {
+audio/dai.c:			 dev->state);
+audio/dai.c:	period_bytes = dev->frames * frame_size;
+audio/dai.c:	return dev->direction == SOF_IPC_STREAM_PLAYBACK ?
+audio/dai.c:	dev->position = 0;
+audio/dai.c:	dev->position = 0;
+audio/dai.c:	dd->start_position = dev->position;
+audio/dai.c:			dai_trigger(dd->dai, cmd, dev->direction);
+audio/dai.c:		if (dev->direction == SOF_IPC_STREAM_CAPTURE)
+audio/dai.c:			dai_trigger(dd->dai, cmd, dev->direction);
+audio/dai.c:		dai_trigger(dd->dai, cmd, dev->direction);
+audio/dai.c:		dai_trigger(dd->dai, cmd, dev->direction);
+audio/dai.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/dai.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/dai.c:		 dev->direction, copy_bytes,
+audio/dai.c:	if (!copy_bytes && dd->start_position != dev->position)
+audio/dai.c:	posn->dai_posn = dev->position;
+audio/dai.c:	if (dev->state == COMP_STATE_ACTIVE) {
+audio/dcblock/dcblock.c:	dev->state = COMP_STATE_READY;
+audio/dcblock/dcblock.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/dcblock/dcblock.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/dcblock/dcblock.c:	sourceb = list_first_item(&dev->bsource_list,
+audio/dcblock/dcblock.c:	sinkb = list_first_item(&dev->bsink_list,
+audio/dcblock/dcblock.c:			audio_stream_period_bytes(&sinkb->stream, dev->frames);
+audio/detect_test.c:	dev->state = COMP_STATE_READY;
+audio/detect_test.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/detect_test.c:	if (dev->state != COMP_STATE_READY) {
+audio/detect_test.c:	source = list_first_item(&dev->bsource_list,
+audio/eq_fir/eq_fir.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/eq_fir/eq_fir.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/eq_fir/eq_fir.c:		comp_err(dev, "set_pass_func(): invalid dev->params.frame_fmt");
+audio/eq_fir/eq_fir.c:	dev->state = COMP_STATE_READY;
+audio/eq_fir/eq_fir.c:			if (dev->state ==  COMP_STATE_READY)
+audio/eq_fir/eq_fir.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/eq_fir/eq_fir.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/eq_fir/eq_fir.c:	sourceb = list_first_item(&dev->bsource_list,
+audio/eq_fir/eq_fir.c:	sinkb = list_first_item(&dev->bsink_list,
+audio/eq_fir/eq_fir.c:						      dev->frames);
+audio/eq_iir/eq_iir.c:	dev->state = COMP_STATE_READY;
+audio/eq_iir/eq_iir.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/eq_iir/eq_iir.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/eq_iir/eq_iir.c:			if (dev->state ==  COMP_STATE_READY)
+audio/eq_iir/eq_iir.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/eq_iir/eq_iir.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/eq_iir/eq_iir.c:	sourceb = list_first_item(&dev->bsource_list,
+audio/eq_iir/eq_iir.c:	sinkb = list_first_item(&dev->bsink_list,
+audio/eq_iir/eq_iir.c:						      dev->frames);
+audio/host.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
+audio/host.c:	dev->position += bytes;
+audio/host.c:			pipeline_get_timestamp(dev->pipeline, dev, &hd->posn);
+audio/host.c:			mailbox_stream_write(dev->pipeline->posn_offset,
+audio/host.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
+audio/host.c:	if (!dev->position)
+audio/host.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
+audio/host.c:	dir = dev->direction == SOF_IPC_STREAM_PLAYBACK ?
+audio/host.c:	dev->state = COMP_STATE_READY;
+audio/host.c:			dev->direction == SOF_IPC_STREAM_PLAYBACK ?
+audio/host.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
+audio/host.c:		hd->local_buffer = list_first_item(&dev->bsink_list,
+audio/host.c:		hd->local_buffer = list_first_item(&dev->bsource_list,
+audio/host.c:	period_bytes = dev->frames *
+audio/host.c:		 dev->frames, audio_stream_frame_bytes(&hd->local_buffer->stream));
+audio/host.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/host.c:	config->irq_disabled = pipeline_is_timer_driven(dev->pipeline);
+audio/host.c:	config->period = dev->pipeline->ipc_pipe.period;
+audio/host.c:	dev->position = 0;
+audio/host.c:	dev->position = 0;
+audio/host.c:	dev->state = COMP_STATE_READY;
+audio/host.c:	if (dev->state != COMP_STATE_ACTIVE)
+audio/kpb.c:	dev->state = COMP_STATE_READY;
+audio/kpb.c:	if (dev->state == COMP_STATE_PREPARE) {
+audio/kpb.c:	list_for_item(blist, &dev->bsink_list) {
+audio/kpb.c:	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/kpb.c:	size_t pipeline_period_size = (dev->pipeline->ipc_pipe.period / 1000)
+audio/mixer.c:	dev->state = COMP_STATE_READY;
+audio/mixer.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/mixer.c:	period_bytes = dev->frames * audio_stream_frame_bytes(&sinkb->stream);
+audio/mixer.c:	int dir = dev->pipeline->source_comp->direction;
+audio/mixer.c:		dev->state = COMP_STATE_ACTIVE;
+audio/mixer.c:		dev->state = COMP_STATE_PAUSED;
+audio/mixer.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/mixer.c:	list_for_item(blist, &dev->bsource_list) {
+audio/mixer.c:		if (source->source->state == dev->state) {
+audio/mixer.c:	int dir = dev->pipeline->source_comp->direction;
+audio/mixer.c:		list_for_item(blist, &dev->bsource_list) {
+audio/mixer.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/mixer.c:	if (dev->state != COMP_STATE_ACTIVE) {
+audio/mixer.c:	list_for_item(blist, &dev->bsource_list) {
+audio/mux/mux.c:	if (dev->state > COMP_STATE_INIT) {
+audio/mux/mux.c:		if (dev->comp.type == SOF_COMP_MUX)
+audio/mux/mux.c:	dev->state = COMP_STATE_INIT;
+audio/mux/mux.c:	dev->state = COMP_STATE_READY;
+audio/mux/mux.c:	list_for_item(clist, &dev->bsink_list) {
+audio/mux/mux.c:		if (sink->sink->state == dev->state) {
+audio/mux/mux.c:	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/mux/mux.c:	if (source->source->state != dev->state) {
+audio/mux/mux.c:	list_for_item(clist, &dev->bsource_list) {
+audio/mux/mux.c:		if (source->source->state == dev->state) {
+audio/mux/mux.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/mux/mux.c:	if (sink->sink->state != dev->state) {
+audio/mux/mux.c:	if (dev->comp.type == SOF_COMP_MUX)
+audio/mux/mux_generic.c:	if (list_is_empty(&dev->bsink_list))
+audio/mux/mux_generic.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/mux/mux_generic.c:	if (list_is_empty(&dev->bsource_list))
+audio/mux/mux_generic.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/pipeline.c:		pipe_err(p, "pipeline_prepare(): ret = %d, dev->comp.id = %u",
+audio/pipeline.c:	ret = walk_ctx.comp_func(dev, NULL, &walk_ctx, dev->direction);
+audio/pipeline.c:		pipe_err(p, "pipeline_prepare(): ret = %d, dev->comp.id = %u",
+audio/pipeline.c:	if (dev->state != COMP_STATE_ACTIVE)
+audio/pipeline.c:	walk_ctx.comp_func(dev, NULL, &walk_ctx, dev->direction);
+audio/post_process/post_process.c:	dev->drv = drv;
+audio/post_process/post_process.c:	ret = memcpy_s(&dev->comp, sizeof(struct sof_ipc_comp_process),
+audio/post_process/post_process.c:	dev->state = COMP_STATE_READY;
+audio/post_process/post_process.c:	cd->pp_sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/post_process/post_process.c:        cd->pp_source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/selector/selector.c:	dev->state = COMP_STATE_READY;
+audio/selector/selector.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/selector/selector.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/selector/selector.c:		buffer = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/selector/selector.c:		buffer = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/selector/selector.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/selector/selector.c:	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/selector/selector.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/selector/selector.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/selector/selector.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/selector/selector.c:		audio_stream_period_bytes(&sourceb->stream, dev->frames);
+audio/selector/selector.c:		audio_stream_period_bytes(&sinkb->stream, dev->frames);
+audio/selector/selector.c:		comp_err(dev, "selector_prepare(): cd->sink_period_bytes = 0, dev->frames = %u",
+audio/selector/selector.c:			 dev->frames);
+audio/selector/selector.c:		comp_err(dev, "selector_prepare(): cd->source_period_bytes = 0, dev->frames = %u",
+audio/selector/selector.c:			 dev->frames);
+audio/smart_amp_test.c:	dev->state = COMP_STATE_READY;
+audio/smart_amp_test.c:	if (dev->state != COMP_STATE_READY) {
+audio/smart_amp_test.c:	if (sad->feedback_buf->source->state == dev->state) {
+audio/smart_amp_test.c:	list_for_item(blist, &dev->bsource_list) {
+audio/smart_amp_test.c:	sad->sink_buf = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/src/src.c:	dev->state = COMP_STATE_READY;
+audio/src/src.c:	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
+audio/src/src.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/src/src.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/src/src.c:	cd->source_frames = dev->frames * cd->source_rate / cd->sink_rate;
+audio/src/src.c:	cd->sink_frames = dev->frames;
+audio/src/src.c:	comp_info(dev, "src_params(), sourceb->channels = %u, sinkb->channels = %u, dev->frames = %u",
+audio/src/src.c:		  sinkb->stream.channels, dev->frames);
+audio/src/src.c:	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/src/src.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/src/src.c:	sourceb = list_first_item(&dev->bsource_list,
+audio/src/src.c:	sinkb = list_first_item(&dev->bsink_list,
+audio/src/src.c:							dev->frames);
+audio/src/src.c:						      dev->frames);
+audio/tone.c:	dev->state = COMP_STATE_READY;
+audio/tone.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/tone.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/tone.c:	cd->period_bytes = dev->frames *
+audio/tone.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/tone.c:		cd->tone_func(dev, &sink->stream, dev->frames);
+audio/tone.c:		return dev->frames;
+audio/tone.c:	sourceb = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/volume/volume.c:	if (dev->state == COMP_STATE_READY) {
+audio/volume/volume.c:	dev->state = COMP_STATE_READY;
+audio/volume/volume.c:	source = list_first_item(&dev->bsource_list, struct comp_buffer,
+audio/volume/volume.c:	sink = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/volume/volume.c:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+audio/volume/volume.c:	sinkb = list_first_item(&dev->bsink_list,
+audio/volume/volume.c:						      dev->frames);
+audio/volume/volume.c:	cd->vol_ramp_frames = dev->frames / (dev->period / VOL_RAMP_UPDATE_US);
+idc/idc.c:	ret = comp_params(ipc_dev->cd, params);
+idc/idc.c:	dev = ipc_dev->cd;
+idc/idc.c:	if (!dev->task) {
+idc/idc.c:		dev->task = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
+idc/idc.c:				    sizeof(*dev->task));
+idc/idc.c:		if (!dev->task) {
+idc/idc.c:		ret = schedule_task_init_ll(dev->task,
+idc/idc.c:					    dev->priority, comp_task, dev,
+idc/idc.c:					    dev->comp.core, 0);
+idc/idc.c:			rfree(dev->task);
+idc/idc.c:	ret = comp_prepare(ipc_dev->cd);
+idc/idc.c:	ret = comp_trigger(ipc_dev->cd, cmd);
+idc/idc.c:		schedule_task(ipc_dev->cd->task, 0, ipc_dev->cd->period);
+idc/idc.c:		schedule_task_cancel(ipc_dev->cd->task);
+idc/idc.c:	platform_shared_commit(ipc_dev->cd, sizeof(*ipc_dev->cd));
+idc/idc.c:	ret = comp_reset(ipc_dev->cd);
+include/sof/audio/component.h: * sof-docs/developer_guides/firmware/components/images/comp-dev-states.pu
+include/sof/audio/component.h:	(struct type *)(&dev->comp)
+include/sof/audio/component.h:	return &dev->comp;
+include/sof/audio/component.h:	return dev->comp.id;
+include/sof/audio/component.h:	return dev->comp.pipeline_id;
+include/sof/audio/component.h:	return dev->comp.type;
+include/sof/audio/component.h:	return (struct sof_ipc_comp_config *)(&dev->comp + 1);
+include/sof/audio/component.h:	dev->size = bytes;
+include/sof/audio/component.h:	dev->drv = drv;
+include/sof/audio/component.h:	memcpy_s(&dev->tctx, sizeof(struct tr_ctx),
+include/sof/audio/component.h:		 trace_comp_drv_get_tr_ctx(dev->drv), sizeof(struct tr_ctx));
+include/sof/audio/component.h:	comp_err(dev, "comp_underrun(): dev->comp.id = %u, source->avail = %u, copy_bytes = %u",
+include/sof/audio/component.h:	pipeline_xrun(dev->pipeline, dev, bytes);
+include/sof/audio/component.h:	pipeline_xrun(dev->pipeline, dev, bytes);
+include/sof/audio/component_ext.h:	assert(dev->drv->ops.free);
+include/sof/audio/component_ext.h:	if (dev->is_shared && dev->task) {
+include/sof/audio/component_ext.h:		schedule_task_free(dev->task);
+include/sof/audio/component_ext.h:		rfree(dev->task);
+include/sof/audio/component_ext.h:	dev->drv->ops.free(dev);
+include/sof/audio/component_ext.h:	if (dev->is_shared)
+include/sof/audio/component_ext.h:	struct idc_msg msg = { IDC_MSG_PARAMS, IDC_MSG_PARAMS_EXT(dev->comp.id),
+include/sof/audio/component_ext.h:		dev->comp.core, sizeof(*params), params, };
+include/sof/audio/component_ext.h:	if (dev->is_shared && !cpu_is_me(dev->comp.core)) {
+include/sof/audio/component_ext.h:		if (dev->drv->ops.params) {
+include/sof/audio/component_ext.h:			ret = dev->drv->ops.params(dev, params);
+include/sof/audio/component_ext.h:	if (dev->drv->ops.dai_get_hw_params)
+include/sof/audio/component_ext.h:		ret = dev->drv->ops.dai_get_hw_params(dev, params, dir);
+include/sof/audio/component_ext.h:	if (dev->drv->ops.cmd)
+include/sof/audio/component_ext.h:		ret = dev->drv->ops.cmd(dev, cmd, data, max_data_size);
+include/sof/audio/component_ext.h:		IDC_MSG_TRIGGER_EXT(dev->comp.id), dev->comp.core, sizeof(cmd),
+include/sof/audio/component_ext.h:	assert(dev->drv->ops.trigger);
+include/sof/audio/component_ext.h:	ret = (dev->is_shared && !cpu_is_me(dev->comp.core)) ?
+include/sof/audio/component_ext.h:		comp_trigger_remote(dev, cmd) : dev->drv->ops.trigger(dev, cmd);
+include/sof/audio/component_ext.h:		IDC_MSG_PREPARE_EXT(dev->comp.id), dev->comp.core, };
+include/sof/audio/component_ext.h:	if (dev->drv->ops.prepare)
+include/sof/audio/component_ext.h:		ret = (dev->is_shared && !cpu_is_me(dev->comp.core)) ?
+include/sof/audio/component_ext.h:			comp_prepare_remote(dev) : dev->drv->ops.prepare(dev);
+include/sof/audio/component_ext.h:	assert(dev->drv->ops.copy);
+include/sof/audio/component_ext.h:	if (cpu_is_me(dev->comp.core)) {
+include/sof/audio/component_ext.h:		perf_cnt_init(&dev->pcd);
+include/sof/audio/component_ext.h:		ret = dev->drv->ops.copy(dev);
+include/sof/audio/component_ext.h:		perf_cnt_stamp(&dev->pcd, comp_perf_info, dev);
+include/sof/audio/component_ext.h:	if (dev->drv->ops.set_attribute)
+include/sof/audio/component_ext.h:		ret = dev->drv->ops.set_attribute(dev, type, value);
+include/sof/audio/component_ext.h:		IDC_MSG_RESET_EXT(dev->comp.id), dev->comp.core, };
+include/sof/audio/component_ext.h:	if (dev->drv->ops.reset)
+include/sof/audio/component_ext.h:		ret = (dev->is_shared && !cpu_is_me(dev->comp.core)) ?
+include/sof/audio/component_ext.h:			comp_reset_remote(dev) : dev->drv->ops.reset(dev);
+include/sof/audio/component_ext.h:	if (dev->drv->ops.dai_config)
+include/sof/audio/component_ext.h:		ret = dev->drv->ops.dai_config(dev, config);
+include/sof/audio/component_ext.h:	if (dev->drv->ops.position)
+include/sof/audio/component_ext.h:		ret = dev->drv->ops.position(dev, posn);
+include/sof/audio/component_ext.h:	return dev == dev->pipeline->sched_comp;
+include/sof/audio/volume.h:	sinkb = list_first_item(&dev->bsink_list, struct comp_buffer,
+ipc/handler.c:	if (!cpu_is_me(pcm_dev->core))
+ipc/handler.c:		return ipc_process_on_core(pcm_dev->core);
+ipc/handler.c:	if (!pcm_dev->cd->pipeline) {
+ipc/handler.c:	cd = pcm_dev->cd;
+ipc/handler.c:	err = pipeline_params(pcm_dev->cd->pipeline, pcm_dev->cd,
+ipc/handler.c:		       pcm_dev->cd->pipeline->ipc_pipe.pipeline_id,
+ipc/handler.c:	err = pipeline_prepare(pcm_dev->cd->pipeline, pcm_dev->cd);
+ipc/handler.c:		       pcm_dev->cd->pipeline->ipc_pipe.pipeline_id,
+ipc/handler.c:	reply.posn_offset = pcm_dev->cd->pipeline->posn_offset;
+ipc/handler.c:	reset_err = pipeline_reset(pcm_dev->cd->pipeline, pcm_dev->cd);
+ipc/handler.c:		       pcm_dev->cd->pipeline->ipc_pipe.pipeline_id,
+ipc/handler.c:	if (!cpu_is_me(pcm_dev->core))
+ipc/handler.c:		return ipc_process_on_core(pcm_dev->core);
+ipc/handler.c:	if (!pcm_dev->cd->pipeline) {
+ipc/handler.c:	ret = pipeline_reset(pcm_dev->cd->pipeline, pcm_dev->cd);
+ipc/handler.c:	if (!cpu_is_me(pcm_dev->core))
+ipc/handler.c:		return ipc_process_on_core(pcm_dev->core);
+ipc/handler.c:	pipeline_get_timestamp(pcm_dev->cd->pipeline, pcm_dev->cd, &posn);
+ipc/handler.c:	mailbox_stream_write(pcm_dev->cd->pipeline->posn_offset,
+ipc/handler.c:	if (!cpu_is_me(pcm_dev->core))
+ipc/handler.c:		return ipc_process_on_core(pcm_dev->core);
+ipc/handler.c:	ret = pipeline_trigger(pcm_dev->cd->pipeline, pcm_dev->cd, cmd);
+ipc/handler.c:	if (!cpu_is_me(comp_dev->core))
+ipc/handler.c:		return ipc_process_on_core(comp_dev->core);
+ipc/handler.c:	ret = comp_cmd(comp_dev->cd, cmd, data, SOF_IPC_MSG_MAX_SIZE);
+probe/probe.c:		if (dev->type != COMP_TYPE_BUFFER) {
+probe/probe.c:		notifier_register(_probe, dev->cb, NOTIFIER_ID_BUFFER_PRODUCE,
+probe/probe.c:		notifier_register(_probe, dev->cb, NOTIFIER_ID_BUFFER_FREE,
+probe/probe.c:					notifier_unregister(_probe, dev->cb,
+probe/probe.c:					notifier_unregister(_probe, dev->cb,

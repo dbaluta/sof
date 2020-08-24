@@ -61,6 +61,7 @@ enum sof_ipc_frame {
 enum sof_ipc_buffer_format {
 	SOF_IPC_BUFFER_INTERLEAVED,
 	SOF_IPC_BUFFER_NONINTERLEAVED,
+	SOF_IPC_BUFFER_COMPRESSED,
 	/* other formats here */
 };
 

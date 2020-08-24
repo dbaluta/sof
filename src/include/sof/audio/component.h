@@ -650,6 +650,7 @@ static inline void component_set_period_frames(struct comp_dev *current,
 	 * As we don't have floats use scale divider 1000000.
 	 * Also integer round up the result.
 	 */
+	comp_err(current, "set_period_frames, rate %d period %d", rate, current->period);
 	current->frames = ceil_divide(rate * current->period, 1000000);
 }
 

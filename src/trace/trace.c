@@ -180,7 +180,7 @@ void trace_on(void)
 	spin_lock_irq(&trace->lock, flags);
 
 	trace->enable = 1;
-	dma_trace_on();
+	//dma_trace_on();
 
 	platform_shared_commit(trace, sizeof(*trace));
 

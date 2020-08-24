@@ -1129,7 +1129,7 @@ static int ipc_glb_tplg_buffer_new(uint32_t header)
 	if (!cpu_is_me(ipc_buffer.comp.core))
 		return ipc_process_on_core(ipc_buffer.comp.core);
 
-	tr_dbg(&ipc_tr, "ipc: pipe %d buffer %d -> new (0x%x bytes)",
+	tr_err(&ipc_tr, "ipc: pipe %d buffer %d -> new (0x%x bytes)",
 	       ipc_buffer.comp.pipeline_id, ipc_buffer.comp.id,
 	       ipc_buffer.size);
 

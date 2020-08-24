@@ -35,6 +35,8 @@
 #include <user/trace.h>
 
 
+#define CNTX 24
+
 void *__vec_memcpy(void *dst, const void *src, size_t len);
 
 /* XXXX: how to handle this? */
@@ -266,236 +268,154 @@ static int post_process_reset(struct comp_dev *dev)
 }
 
 
-// static void post_process_copy_to_sink(struct audio_stream *sink,
-// 			       const struct audio_stream *source,
-// 			       size_t size)
-// {
-//     void *dst;
-//     void *src;
-//     size_t i;
-//     size_t j = 0;
-//     size_t channel;
-//     size_t channels = source->channels;
-//     size_t sample_width = source->frame_fmt == SOF_IPC_FRAME_S16_LE ?
-// 			  16 : 32;
-//     size_t frames = size / (sample_width / 8 * channels);
-
-//     for (i = 0; i < frames; i++) {
-// 	for (channel = 0; channel < channels; channel++) {
-// 	    switch (sample_width) {
-// #if CONFIG_FORMAT_S16LE
-// 	    case 16:
-// 		dst = audio_stream_write_frag_s16(sink, j);
-// 		src = audio_stream_read_frag_s16(source, j);
-// 		*((int16_t *)dst) = *((int16_t *)src);
-// 		break;
-// #endif /* CONFIG_FORMAT_S16LE
-// #if CONFIG_FORMAT_S24LE || CONFIG_FORMAT_S32LE
-// 	    case 24:
-// 		/* FALLTHROUGH */
-// 	    case 32:
-// 		dst = audio_stream_write_frag_s32(sink, j);
-// 		src = audio_stream_read_frag_s32(source, j);
-// 		*((int32_t *)dst) = *((int32_t *)src);
-// 		break;
-// #endif /* CONFIG_FORMAT_S24LE || CONFIG_FORMAT_S32LE*/
-// 	    default:
-// 		comp_cl_info(&comp_post_process, "KPB: An attempt to copy "
-// 			"not supported format!");
-// 		return;
-// 	    }
-// 	    j++;
-// 	}
-//     }
-// }*/
-
-static void post_process_copy_to_lib(const struct audio_stream *source,
-			      void *lib_buff, size_t size)
-{
-	void *src;
-	void *dst = lib_buff;
-	size_t i;
-	size_t j = 0;
-	size_t channel;
-	size_t channels = source->channels;
-	size_t sample_width = source->frame_fmt == SOF_IPC_FRAME_S16_LE ?
-			  16 : 32;
-	size_t frames = size / (sample_width / 8 * channels);
-
-	for (i = 0; i < frames; i++) {
-		for (channel = 0; channel < channels; channel++) {
-			switch (sample_width) {
-			case 16:
-				src = audio_stream_read_frag_s16(source, j);
-				*((int16_t *)dst) = *((int16_t *)src);
-				dst = ((int16_t *)dst) + 1;
-				break;
-#if CONFIG_FORMAT_S24LE || CONFIG_FORMAT_S32LE
-			case 24:
-			case 32:
-				src = audio_stream_read_frag_s32(source, j);
-				*((int32_t *)dst) = *((int32_t *)src);
-				dst = ((int32_t *)dst) + 1;
-				break;
-#endif /* CONFIG_FORMAT_S24LE || CONFIG_FORMAT_S32LE*/
-			default:
-				comp_cl_info(&comp_post_process, "post_process_copy_to_lib(): An attempt to copy not supported format!");
-				return;
-			}
-			j++;
-		}
-	}
-}
-
-
-static void post_process_copy_from_lib_to_sink(void *source, struct audio_stream *sink,
-			      size_t size)
-{
-	void *dst;
-	void *src = source;
-	size_t i;
-	size_t j = 0;
-	size_t channel;
-	size_t sample_width = sink->frame_fmt == SOF_IPC_FRAME_S16_LE ?
-			  16 : 32;
-	size_t channels = sink->channels;
-	size_t frames = size / (sample_width / 8 * channels);
-
-	for (i = 0; i < frames; i++) {
-		for (channel = 0; channel < channels; channel++) {
-			switch (sample_width) {
-#if CONFIG_FORMAT_S16LE
-			case 16:
-				dst = audio_stream_write_frag_s16(sink, j);
-				*((int16_t *)dst) = *((int16_t *)src);
-				src = ((int16_t *)src) + 1;
-				break;
-#endif /* CONFIG_FORMAT_S16LE */
-#if CONFIG_FORMAT_S24LE || CONFIG_FORMAT_S32LE
-			case 24:
-			case 32:
-				dst = audio_stream_write_frag_s32(sink, j);
-				*((int32_t *)dst) = *((int32_t *)src);
-				src = ((int32_t *)src) + 1;
-				break;
-#endif /* CONFIG_FORMAT_S24LE || CONFIG_FORMAT_S32LE */
-			default:
-				comp_cl_info(&comp_post_process, "post_process_copy_to_lib(): An attempt to copy not supported format!");
-				return;
-			}
-			j++;
-		}
-	}
-}
-
-
 static int post_process_init(struct comp_dev *dev)
 {
-	int ret;
-	uint32_t copy_bytes, bytes_to_process, consumed = 0, processed = 0;
+	int ret = 0;
+	uint32_t bytes_to_process, consumed = 0, processed = 0;
 	struct comp_data *cd = comp_get_drvdata(dev);
 	struct comp_buffer *source = cd->pp_source;
         uint32_t lib_buff_size = cd->sdata.lib_in_buff_size;
-	bool lib_init = 0;
+	static int cnt = 0;
+	int done = 0;
+
+	cnt++;
 
 	/*TODO: recognize if error was FATAL or non fatal end react accoringly */
 
-        comp_err(dev, "post_process_init() start buf lib  %d avail %d", lib_buff_size, source->stream.avail);
+	if (cnt < 8)
+      	  comp_err(dev, "post_process_init() (#%d) lib_buff_size %d avail %d INIT %d",
+			 cnt, lib_buff_size, source->stream.avail, cd->lib_init);
+
+	if (source->stream.avail < lib_buff_size)
+		return 1;
 
 	/* lib proces already inited nothing to do */
-	if (lib_init)
+	if (cd->lib_init)
 		return 0;
 
-        bytes_to_process = source->stream.avail;
-	copy_bytes = MIN(bytes_to_process, lib_buff_size);
-	comp_err(dev, "copy_bytes() %d\n", copy_bytes);
 
+        bytes_to_process = source->stream.avail;
+	//copy_bytes = MIN(bytes_to_process, lib_buff_size);
 	while (bytes_to_process) {
-		comp_err(dev, "Avail %d, bytes to process = %d ... consuemd = %d",
-			 bytes_to_process, copy_bytes, consumed);
 
 		/* Fill lib buffer completely. NOTE! If you don't fill whole buffer
 		 * the lib will not process the buffer!
 		 */
-		post_process_copy_to_lib(&source->stream,
-					 cd->sdata.lib_in_buff, lib_buff_size);
+		audio_stream_copy_to_buf(&source->stream, 0,
+					 cd->sdata.lib_in_buff, lib_buff_size,
+					 bytes_to_process);
 
-		ret = pp_lib_process_init(dev, lib_buff_size, &consumed);
-		comp_err(dev, "lib init returned ret = %d consumed = %d", ret, consumed);
+		if (cnt < 8)
+		comp_err(dev, "post_process_init buffer %08x %08x %08x %08x",
+			((int*)cd->sdata.lib_in_buff)[0],
+			((int*)cd->sdata.lib_in_buff)[1],
+			((int*)cd->sdata.lib_in_buff)[2],
+			((int*)cd->sdata.lib_in_buff)[3]);
+	
+		done = pp_lib_process_init(dev, bytes_to_process, &consumed);
+		if (cnt < 8)
+		comp_err(dev, "lib init (#%d) returned ret = %d consumed = %d", cnt, ret, consumed);
 	
 		if (ret) {
 			comp_err(dev, "post_process_copy() error %x: lib processing failed",
 				 ret);
 		}
 
+		if (consumed == 0)
+			return 0;
+	
 		bytes_to_process -= consumed;
 		processed += consumed;
+		if (done) {
+			cd->lib_init = 1;
+			break;
+		}
 	}
 
-       comp_update_buffer_consume(source, consumed);
+
+	comp_update_buffer_consume(source, consumed);
+
+	if (cnt < 8)
+	comp_err(dev, "post_process_init finished (#%d) consumed %d remaining %d\n", cnt, consumed, source->stream.avail);
 
 	return 0;
+}
+
+static int __post_process_copy(struct comp_dev *dev)
+{
+	uint32_t bytes_to_process, consumed = 0, produced = 0;
+	struct comp_data *cd = comp_get_drvdata(dev);
+	struct comp_buffer *source = cd->pp_source;
+	struct comp_buffer *sink = cd->pp_sink;
+        uint32_t lib_buff_size = cd->sdata.lib_in_buff_size;
+        uint32_t lib_buff_out_size = cd->sdata.lib_out_buff_size;
+	static int cntx = 0;
+	int ret;
+
+	bytes_to_process = source->stream.avail;
+	
+	if (cntx < CNTX) {
+		comp_err(dev, "__post_process_copy(#%d) AVAIL %d in %d out %d\n", cntx,
+			bytes_to_process, lib_buff_size, lib_buff_out_size);
+	}
+
+
+	cntx++;
+
+	if (bytes_to_process < lib_buff_size)
+		return 0;
+
+	while (bytes_to_process) {
+
+
+		audio_stream_copy_to_buf(&source->stream, 0,
+					 cd->sdata.lib_in_buff, lib_buff_size,
+					 bytes_to_process);
+
+
+		ret = pp_lib_process_data(dev, lib_buff_size, &consumed, &produced);
+		if (ret != 0)
+			return 1;
+	
+                audio_stream_copy_from_buf(cd->sdata.lib_out_buff, produced,
+					    &sink->stream, 0,
+					    produced);
+
+		bytes_to_process -= consumed;
+
+		if (ret == 0)
+			goto out;
+		break;
+	}
+
+out:
+       comp_update_buffer_produce(sink, produced);
+       comp_update_buffer_consume(source, consumed);
+
+       return 0;
 }
 
 static int post_process_copy(struct comp_dev *dev)
 {
 	int ret;
-	uint32_t copy_bytes, bytes_to_process, produced, processed = 0;
+	static int total_consumed = 0;
+
 	struct comp_data *cd = comp_get_drvdata(dev);
 	struct comp_buffer *source = cd->pp_source;
-	struct comp_buffer *sink = cd->pp_sink;
-        uint32_t lib_buff_size = cd->sdata.lib_in_buff_size;
+	//struct comp_buffer *sink = cd->pp_sink;
 	/*TODO: recognize if error was FATAL or non fatal end react accoringly */
 
-        comp_dbg(dev, "post_process_copy() start");
+	total_consumed += source->stream.avail;
 
-	post_process_init(dev);
-
-        bytes_to_process = MIN(sink->stream.free, source->stream.avail);
-	copy_bytes = MIN(bytes_to_process, lib_buff_size);
-	comp_dbg(dev, "copy_bytes() %d\n", copy_bytes);
-
-	while (bytes_to_process) {
-		if (bytes_to_process < lib_buff_size) {
-			comp_dbg(dev, "post_process_copy(): skipping processing as we don't have enough data. Only %d bytes available in source buffer",
-			        bytes_to_process);
-			break;
-		}
-
-		/* Fill lib buffer completely. NOTE! If you don't fill whole buffer
-		 * the lib will not process the buffer!
-		 */
-		post_process_copy_to_lib(&source->stream,
-					 cd->sdata.lib_in_buff, lib_buff_size);
-
-		ret = pp_lib_process_data(dev, lib_buff_size, &produced);
-		if (ret) {
-			comp_err(dev, "post_process_copy() error %x: lib processing failed",
-				 ret);
-		} else if (produced == 0) {
-			/* skipping as lib has not produced anything */
-                        comp_err(dev, "post_process_copy() error %x: lib hasn't processed anything",
-                                 ret);
-			ret = 0;
-			goto end;
-		}
-
-                post_process_copy_from_lib_to_sink(cd->sdata.lib_out_buff,
-                                                   &sink->stream, produced);
-
-		bytes_to_process -= produced;
-		processed += produced;
+	ret = post_process_init(dev);
+	if (ret) {
+		//comp_err(dev, "post_process_copy() returned %d, going out", ret);
+		return 0;
 	}
-	if (!processed) {
-                comp_err(dev, "post_process_copy() error: failed to process anything in this call!");
-	       goto end;
-        }
 
-       comp_update_buffer_produce(sink, processed);
-       comp_update_buffer_consume(source, processed);
+	ret = __post_process_copy(dev);
 
-end:
-	return -EINVAL;
+	return 0;
 
 }
 

@@ -163,8 +163,11 @@ static void host_update_position(struct comp_dev *dev, uint32_t bytes)
 		 */
 		if (hd->host_period_bytes != 0 &&
 		    hd->report_pos >= hd->host_period_bytes) {
-			hd->report_pos = 0;
+			comp_err(dev, "Host_update_pos report_pos %d period_bytes %d local_posn %d",
+				 hd->report_pos, hd->host_period_bytes, hd->local_pos);
 
+			hd->report_pos = 0;
+		
 			/* send timestamped position to host
 			 * (updates position first, by calling ops.position())
 			 */
@@ -281,18 +284,26 @@ static int host_copy_one_shot(struct comp_dev *dev)
 	struct host_data *hd = comp_get_drvdata(dev);
 	uint32_t copy_bytes = 0;
 	int ret = 0;
+	static int cntx = 0;
+
+	cntx++;
 
 	comp_dbg(dev, "host_copy_one_shot()");
 
+#if 0
 	/* update first transfer manually */
 	if (!dev->position)
 		host_one_shot_cb(dev, hd->dma_buffer->stream.size);
-
+#endif
 	copy_bytes = host_get_copy_bytes_one_shot(dev);
 	if (!copy_bytes) {
-		comp_info(dev, "host_copy_one_shot(): no bytes to copy");
+		if (cntx < 5) 
+			comp_info(dev, "host_copy_one_shot(): no bytes to copy");
 		return ret;
 	}
+
+	if (cntx < 5) 
+		comp_err(dev, "host_copy_one_shot() (#%d) copy_bytes %d ", cntx, copy_bytes);
 
 	/* reconfigure transfer */
 	ret = dma_set_config(hd->chan, &hd->config);

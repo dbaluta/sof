@@ -7,6 +7,8 @@
 
 #include <sof/audio/post_process/lib_api.h>
 
+#define CNTX 24
+
 static struct post_process_lib_data pp_lib_data;
 
 static inline void *allocate_lib_obj(size_t obj_size)
@@ -27,11 +29,8 @@ static void handle_error(struct comp_dev *dev, int code) {
 
 	if (code == XA_NO_ERROR)
 		return;
-	
-	comp_err(dev, "handle_erorr %x: ", code);
-	comp_err(dev, "handle_eror is_fatal %d err_clase %d err_sub_code %d",
+	comp_err(dev, "handle_eror is_fatal (%d) err_class %d err_sub_code %d",
 		 is_fatal, err_class, err_sub_code);
-
 }
 
 int pp_set_proc_func(struct comp_dev *dev, int type) {
@@ -323,6 +322,7 @@ int pp_lib_prepare(struct comp_dev *dev,
 	sdata->lib_in_buff = pp_lib_data.in_buff;
 	sdata->lib_out_buff = pp_lib_data.out_buff;
 	sdata->lib_in_buff_size = pp_lib_data.in_buff_size;
+	sdata->lib_out_buff_size = pp_lib_data.out_buff_size;
 
 	pp_lib_data.state = PP_LIB_PREPARED;
 	
@@ -338,9 +338,10 @@ err:
 
 int pp_lib_process_init(struct comp_dev *dev, size_t avail, size_t *consumed)
 {
-	int ret = 0, init_done;
+	int ret = 0, init_done = 0;
+	static int cntx = 0;
 
-	comp_err(dev, "xxx: avaiil %d", avail);
+	cntx++;
 
 	if (!avail) {
 		PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INPUT_OVER, 0, NULL);
@@ -353,22 +354,39 @@ int pp_lib_process_init(struct comp_dev *dev, size_t avail, size_t *consumed)
 	}
 	
 	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT, XA_CMD_TYPE_INIT_PROCESS, NULL);
-	comp_err(dev, "error init process ret = %d", ret);
-
+	if (ret != LIB_NO_ERROR) {
+		if (cntx < CNTX) {
+			comp_err(dev, "lib_abi_init (#%d) INIT_PROCESS failed ret = %x", cntx, ret);
+		}
+		return 1;
+	}
 	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_INIT, XA_CMD_TYPE_INIT_DONE_QUERY, &init_done);
-	comp_err(dev, "error query process ret = %d init done %d", ret, init_done);
+	if (ret != LIB_NO_ERROR) {
+		if (cntx < CNTX) {
+			comp_err(dev, "lib_abi_init (#%d) DONE QUERY failed ret = %x", cntx, ret);
+		}
+
+		return 1;
+	}
 
 	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_CURIDX_INPUT_BUF, 0, consumed);
-	comp_err(dev, "error init process ret = %d consumed %d", ret, *consumed);
-
+	if (cntx < CNTX) {
+		comp_err(dev, "lib_api_init(#%d) ret = %d init_done %d consumed %d", ret, cntx, init_done, *consumed);
+	}
 	return init_done;
 }
 
-int pp_lib_process_data(struct comp_dev *dev, size_t avail, size_t *produced) {
+int pp_lib_process_data(struct comp_dev *dev, size_t avail, size_t *consumed, size_t *produced) {
 	int ret;
+	int init_done;
+
+	static int cntx = 0;
+	cntx++;
+
 
 	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_SET_INPUT_BYTES, 0, &avail);
 	if (ret != LIB_NO_ERROR) {
+		if (cntx < CNTX) 
 		comp_err(dev, "pp_lib_process_data() error %x: failed to set size of input data",
 			 ret);
 		goto err;
@@ -377,16 +395,36 @@ int pp_lib_process_data(struct comp_dev *dev, size_t avail, size_t *produced) {
 	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_EXECUTE, XA_CMD_TYPE_DO_EXECUTE,
 			      NULL);
 	if (ret != LIB_NO_ERROR) {
-		comp_err(dev, "pp_lib_process_data() error %x: processing failed",
-			 ret);
-		goto err;
+		if (cntx < CNTX) {
+			comp_err(dev, "pp_lib_process_dat #%d XA_API_CMD_EXECUTE\n", cntx);
+			handle_error(dev, ret);
+		}
 	}
 
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_EXECUTE, XA_CMD_TYPE_DONE_QUERY, &init_done);
+	if (ret != LIB_NO_ERROR) {
+		if (cntx < CNTX) 
+			comp_err(dev, "pp_lib_process_data() DONE_QUERy ret = %x", ret);
+	}
+		
 	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_OUTPUT_BYTES, 0, produced);
 	if (ret != LIB_NO_ERROR) {
+		if (cntx < CNTX)
 		comp_err(dev, "pp_lib_process_data() error %x: could not get produced bytes",
 			 ret);
-		goto err;
+	}
+
+	ret = PP_LIB_API_CALL(pp_lib_data, XA_API_CMD_GET_CURIDX_INPUT_BUF, 0, consumed);
+	if (ret != LIB_NO_ERROR) {
+		if (cntx < CNTX)
+		comp_err(dev, "pp_lib_process_data() error %x: could not get consumed bytes",
+			 ret);
+	}
+
+
+	if (cntx < CNTX) {
+		comp_err(dev, "pp_lib_proces_data(#%d) init_done %d consumed %d produced %d", cntx, init_done, *consumed, 
+			 *produced);
 	}
 
 	return 0;

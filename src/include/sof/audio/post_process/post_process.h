@@ -29,6 +29,7 @@ struct comp_data {
 	bool lib_r_cfg_avail;
 	void *pp_lib_runtime_config;
 	xa_codec_func_t *pp_proc_func;
+	int lib_init;
 };
 
 static  inline int validate_config(struct post_process_config *cfg)
