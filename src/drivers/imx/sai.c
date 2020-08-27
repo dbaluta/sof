@@ -26,6 +26,20 @@ DECLARE_TR_CTX(sai_tr, SOF_UUID(sai_uuid), LOG_LEVEL_INFO);
 #define REG_TX_DIR 0
 #define REG_RX_DIR 1
 
+#define FSL_SAI_CSR_SEIE        BIT(11)
+#define FSL_SAI_CSR_FEIE        BIT(10)
+
+#define FSL_SAI_CSR_xF_SHIFT    16
+#define FSL_SAI_CSR_xF_W_SHIFT  18
+#define FSL_SAI_CSR_xF_MASK     (0x1f << FSL_SAI_CSR_xF_SHIFT)
+#define FSL_SAI_CSR_xF_W_MASK   (0x7 << FSL_SAI_CSR_xF_W_SHIFT)
+
+#define FSL_SAI_CSR_xIE_SHIFT   8
+#define FSL_SAI_CSR_xIE_MASK    (0x1f << FSL_SAI_CSR_xIE_SHIFT)
+
+#define FSL_SAI_FLAGS  (FSL_SAI_CSR_SEIE | FSL_SAI_CSR_FEIE)
+
+
 static void sai_start(struct dai *dai, int direction)
 {
 	dai_info(dai, "SAI: sai_start");
@@ -49,6 +63,14 @@ static void sai_start(struct dai *dai, int direction)
 	/* transmitter enable */
 	dai_update_bits(dai, REG_SAI_XCSR(direction),
 			REG_SAI_CSR_TERE, REG_SAI_CSR_TERE);
+
+
+	dai_update_bits(dai, REG_SAI_XCSR(direction),
+			REG_SAI_CSR_SE, REG_SAI_CSR_SE);
+
+	dai_update_bits(dai, REG_SAI_XCSR(direction),
+		FSL_SAI_CSR_xIE_MASK, FSL_SAI_FLAGS);
+
 	/* TODO: for the time being use half FIFO size as watermark */
 	dai_update_bits(dai, REG_SAI_XCR1(direction),
 			REG_SAI_CR1_RFW_MASK, SAI_FIFO_WORD_SIZE / 2);
@@ -71,7 +93,8 @@ static void sai_start(struct dai *dai, int direction)
 
 static void sai_stop(struct dai *dai, int direction)
 {
-	dai_info(dai, "SAI: sai_stop");
+	static int count = 0;
+	dai_err(dai, "SAI: sai_stop");
 
 	uint32_t xcsr = 0U;
 
@@ -79,13 +102,22 @@ static void sai_stop(struct dai *dai, int direction)
 			REG_SAI_CSR_FRDE, 0);
 	dai_update_bits(dai, REG_SAI_XCSR(direction),
 			REG_SAI_CSR_XIE_MASK, 0);
-
+	dai_err(dai, "sai_stop(%d) .. xcsr %08x", count++, dai_read(dai, REG_SAI_XCSR(direction)));
 	/* Check if the opposite direction is also disabled */
 	xcsr = dai_read(dai, REG_SAI_XCSR(!direction));
 	if (!(xcsr & REG_SAI_CSR_FRDE)) {
 		/* Disable both directions and reset their FIFOs */
 		dai_update_bits(dai, REG_SAI_TCSR, REG_SAI_CSR_TERE, 0);
 		dai_update_bits(dai, REG_SAI_RCSR, REG_SAI_CSR_TERE, 0);
+
+		do {
+			xcsr = dai_read(dai, REG_SAI_XCSR(direction));
+		} while (xcsr & REG_SAI_CSR_TERE);
+
+		dai_err(dai, "SAI: sai_stop OKK!");
+	
+		dai_update_bits(dai, REG_SAI_TCSR, REG_SAI_CSR_FR, REG_SAI_CSR_FR);
+		dai_update_bits(dai, REG_SAI_RCSR, REG_SAI_CSR_FR, REG_SAI_CSR_FR);
 
 		/* Software Reset for both Tx and Rx */
 		dai_update_bits(dai, REG_SAI_TCSR, REG_SAI_CSR_SR,
@@ -291,6 +323,58 @@ static int sai_trigger(struct dai *dai, int cmd, int direction)
 	return 0;
 }
 
+static void sai_handler(void *data)
+{
+	struct dai *dai = data;
+	uint32_t tcsr = dai_read(dai, REG_SAI_TCSR);
+	uint32_t mask = (FSL_SAI_FLAGS >> FSL_SAI_CSR_xIE_SHIFT) << FSL_SAI_CSR_xF_SHIFT;
+	uint32_t flags = tcsr & mask;
+	static int count = 0;
+	
+	if (count < 5)
+		dai_err(dai, "IRQ count %d tcsr %08x flags %08x", count++, tcsr, flags);
+
+	if(!flags)
+		goto irq_rx;
+
+	if (flags & REG_SAI_CSR_FEF)
+		tcsr |= REG_SAI_CSR_FR;
+ 
+	flags &= FSL_SAI_CSR_xF_W_MASK;
+	tcsr &= ~FSL_SAI_CSR_xF_MASK;
+
+	if (count < 5)
+		dai_err(dai, "IRQ count %d tcsr %08x flags %08x -> | %08x", count++, tcsr, flags, flags | tcsr);
+
+	if(flags)
+		dai_write(dai, REG_SAI_TCSR, flags | tcsr);
+
+	count++;
+	//	write32(sai_addr + FSL_SAI_TCSR(offset), flags | tcsr);
+
+irq_rx:
+#if 0
+	rcsr = *(volatile unsigned int *)(sai_addr + FSL_SAI_RCSR(offset));
+	flags = rcsr & mask;
+
+	if (!flags)
+		goto out;
+	
+	if (flags & FSL_SAI_CSR_FEF)
+		rcsr |= FSL_SAI_CSR_FR;
+
+	flags &= FSL_SAI_CSR_xF_W_MASK;
+	tcsr &= ~FSL_SAI_CSR_xF_MASK;
+
+	if(flags)
+		write32(sai_addr + FSL_SAI_RCSR(offset), flags | tcsr);
+out:
+#endif
+	return;
+}
+
+int irq;
+
 static int sai_probe(struct dai *dai)
 {
 	dai_info(dai, "SAI: sai_probe");
@@ -317,6 +401,13 @@ static int sai_probe(struct dai *dai)
 	dai_write(dai, REG_SAI_RCR5, 0U);
 	dai_write(dai, REG_SAI_RMR,  0U);
 
+	irq = interrupt_get_irq(18, "irqsteer1"); //SAI IRQ 50
+
+	interrupt_register(irq, sai_handler, dai);
+
+	interrupt_unmask(irq, cpu_get_id());
+	interrupt_enable(irq, dai);
+	
 	return 0;
 }
 
