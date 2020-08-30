@@ -26,8 +26,6 @@ DECLARE_TR_CTX(sdma_tr, SOF_UUID(sdma_uuid), LOG_LEVEL_INFO);
 
 #define SDMA_BUFFER_PERIOD_COUNT 2
 
-int start_run = -1;
-
 struct sdma_bd {
 	/* SDMA BD (buffer descriptor) configuration */
 	uint32_t config;
@@ -56,8 +54,6 @@ struct sdma_ccb {
 	uint32_t reserved; /* No channel descriptor implemented */
 };
 
-
-
 /* This structure includes all SDMA related channel data */
 struct sdma_chan {
 	/* Statically allocate BDs; we can change if we ever need dynamic
@@ -73,7 +69,6 @@ struct sdma_chan {
 	int fifo_paddr;
 };
 
-
 /* Private data for the whole controller */
 struct sdma_pdata {
 	/* Statically allocate channel private data and contexts array.
@@ -83,31 +78,6 @@ struct sdma_pdata {
 	struct sdma_context *contexts;
 	struct sdma_ccb *ccb_array;
 };
-
-static void print_bd(struct sdma_bd *bd, int run){
-
-	dcache_invalidate_region(bd, sizeof(*bd));
-	tr_info(&sdma_tr, "info bd run %d, BD addr %x config %x buf_addr %x",
-		run, (int)bd, bd->config, bd->buf_addr);
-}
-
-static void print_ccb(struct sdma_ccb *ccb, int run) {
-
-	dcache_invalidate_region(ccb, sizeof(*ccb));
-	tr_info(&sdma_tr, "info ccb run %d current %x base %x status %x",
-		run, ccb->current_bd_paddr, ccb->base_bd_paddr, ccb->status);
-}
-
-static void print_sdma_info(struct sdma_chan *chan, int run) {
-	int i;
-	tr_info(&sdma_tr, "print_sdma_info() run %d", run);
-	print_ccb(chan->ccb, run);
-	for (i = 0; i < 2; i++)
-		print_bd(&chan->desc[i], run);
-
-	tr_info(&sdma_tr, "info: run %d next_bd %d hw_event %d desc_count %d",
-		run, chan->next_bd, chan->hw_event, chan->desc_count);
-}
 
 static void sdma_set_overrides(struct dma_chan_data *channel,
 			       bool event_override, bool host_override)
@@ -123,6 +93,11 @@ static void sdma_set_overrides(struct dma_chan_data *channel,
 static void sdma_enable_channel(struct dma *dma, int channel)
 {
 	dma_reg_write(dma, SDMA_HSTART, BIT(channel));
+}
+
+static void sdma_disable_channel(struct dma *dma, int channel)
+{
+	dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
 }
 
 static int sdma_run_c0(struct dma *dma, uint8_t cmd, uint32_t buf_addr,
@@ -172,7 +147,7 @@ static int sdma_run_c0(struct dma *dma, uint8_t cmd, uint32_t buf_addr,
 		dma_reg_update_bits(dma, SDMA_CONFIG, SDMA_CONFIG_CSM_MSK,
 				    SDMA_CONFIG_CSM_DYN);
 
-	tr_dbg(&sdma_tr, "sdma_run_c0 done, ret = %d", ret);
+	tr_info(&sdma_tr, "sdma_run_c0 done, ret = %d", ret);
 
 	return ret;
 }
@@ -448,7 +423,7 @@ static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 	int i;
 	/* Ignoring channel 0; let's just allocate a free channel */
 
-	tr_info(&sdma_tr, "sdma_channel_get idx %d run %d", chan, start_run);
+	tr_dbg(&sdma_tr, "sdma_channel_get");
 	for (i = 1; i < dma->plat_data.channels; i++) {
 		channel = &dma->chan[i];
 		if (channel->status != COMP_STATE_INIT)
@@ -466,6 +441,7 @@ static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 
 		/* Allow events, allow manual */
 		sdma_set_overrides(channel, false, false);
+		
 		return channel;
 	}
 	tr_err(&sdma_tr, "sdma no channel free");
@@ -476,7 +452,7 @@ static void sdma_clear_event(struct dma_chan_data *channel)
 {
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
 
-	tr_info(&sdma_tr, "sdma_clear_event(%d); old event is %d",
+	tr_dbg(&sdma_tr, "sdma_clear_event(%d); old event is %d",
 	       channel->index, pdata->hw_event);
 	if (pdata->hw_event != -1)
 		dma_reg_update_bits(channel->dma, SDMA_CHNENBL(pdata->hw_event),
@@ -505,12 +481,11 @@ static void sdma_set_event(struct dma_chan_data *channel, int eventnum)
 	/* Set correct overrides for event-driven channels:
 	 * EVTOVR=0 HOSTOVR=1
 	 */
-	sdma_set_overrides(channel, false, false);
+	//sdma_set_overrides(channel, false, true);
 }
 
 static void sdma_channel_put(struct dma_chan_data *channel)
 {
-	tr_info(&sdma_tr, "sdma_channel_put %d run %d", channel->index, start_run);
 	if (channel->status == COMP_STATE_INIT)
 		return; /* Channel was already free */
 	tr_dbg(&sdma_tr, "sdma_channel_put(%d)", channel->index);
@@ -522,15 +497,9 @@ static void sdma_channel_put(struct dma_chan_data *channel)
 
 static int sdma_start(struct dma_chan_data *channel)
 {
-	struct sdma_chan *pdata = dma_chan_get_data(channel);
-	static int count = 0;
-	tr_err(&sdma_tr, "(#%d) run %d |sdma_start(%d) next_bd = %d", count, start_run, channel->index, pdata->next_bd);
+	///struct sdma_chan *pdata = dma_chan_get_data(channel);
 
-	pdata->next_bd = 0;
-
-	tr_err(&sdma_tr, "|| (#%d) run %d |sdma_start(%d) next_bd = %d",count, start_run, channel->index, pdata->next_bd);
-	count++;
-	print_sdma_info(pdata, start_run);
+	tr_info(&sdma_tr, "sdma_start(%d)", channel->index);
 
 	if (channel->status != COMP_STATE_PREPARE &&
 	    channel->status != COMP_STATE_SUSPEND)
@@ -538,36 +507,41 @@ static int sdma_start(struct dma_chan_data *channel)
 
 	channel->status = COMP_STATE_ACTIVE;
 
+
 	/* If channel is event driven, allow it to run by setting HOSTOVR.
 	 * If it's manually controlled, kickstart it by writing to SDMA_HSTART.
 	 */
-//	if (pdata->hw_event != -1)
-//		dma_reg_update_bits(channel->dma, SDMA_HOSTOVR,
-//				    BIT(channel->index), BIT(channel->index));
-//	else
-	
+#if 0
+	if (pdata->hw_event != -1)
+		dma_reg_update_bits(channel->dma, SDMA_HOSTOVR,
+				    BIT(channel->index), BIT(channel->index));
+	else
+		dma_reg_write(channel->dma, SDMA_HSTART, BIT(channel->index));
+#endif
 	/* Set a runnable channel priority (channel 0 requires maximum priority)
 	 * so it remains usable even if others are schedulable.
 	 */
-	if (channel->index)
-		dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index),
-			      SDMA_DEFPRI);
-	else
-		dma_reg_write(channel->dma, SDMA_CHNPRI(0), SDMA_MAXPRI);
+//	if (channel->index)
+//		dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index),
+//			      SDMA_DEFPRI);
+//	else
+//		dma_reg_write(channel->dma, SDMA_CHNPRI(0), SDMA_MAXPRI);
+//
 
+	///sdma_set_event(channel, pdata->hw_event);
 
-	sdma_set_event(channel, pdata->hw_event);
+	//sdma_set_overrides(channel, false, false);
 
-	//dma_reg_update_bits(channel->dma, SDMA_HOSTOVR, BIT(channel->index), 0);
 	dma_reg_write(channel->dma, SDMA_HSTART, BIT(channel->index));
 
+	tr_info(&sdma_tr, "sdma_start(%d) --->val %x %x", channel->index,
+		dma_reg_read(channel->dma, SDMA_HSTART), dma_reg_read(channel->dma, SDMA_STOP_STAT));
 	return 0;
 }
 
 static int sdma_stop(struct dma_chan_data *channel)
 {
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
-	static int count = 0;
 
 	/* do not try to stop multiple times */
 	if (channel->status != COMP_STATE_ACTIVE &&
@@ -576,39 +550,27 @@ static int sdma_stop(struct dma_chan_data *channel)
 
 	channel->status = COMP_STATE_READY;
 
-	tr_err(&sdma_tr, "[#%d] run %d sdma_stop(%d) next_bd %d", count++, start_run, channel->index, pdata->next_bd);
-
-	print_sdma_info(pdata, start_run);
-
+	tr_dbg(&sdma_tr, "sdma_stop(%d)", channel->index);
 	if (pdata->hw_event != -1) {
-		//dma_interrupt(channel, DMA_IRQ_CLEAR);
-		sdma_set_overrides(channel, false, false);
-		dma_reg_update_bits(channel->dma, SDMA_CHNENBL(pdata->hw_event),
-				    BIT(channel->index), 0);
-		dma_reg_write(channel->dma, SDMA_STOP_STAT, BIT(channel->index));
-
-		tr_err(&sdma_tr, "run %d sdma_stop() %x DSTART_DE %x",start_run,  dma_reg_read(channel->dma, SDMA_STOP_STAT),
-		       dma_reg_read(channel->dma, SDMA_HSTART));
-		//sdma_clear_event(channel);
-
 		/* For event driven channels, disable them from running by
 		 * setting HOSTOVR to 0. Manually controlled channels need not
 		 * be stopped as they will finish their transfer and stop on
 		 * their own.
 		 */
-		//pdata->desc[0].config |= SDMA_BD_DONE;
-		//pdata->desc[1].config |= SDMA_BD_DONE;
+		//dma_reg_update_bits(channel->dma, SDMA_HOSTOVR,
+		//		    BIT(channel->index), 0);
 
-		dma_reg_update_bits(channel->dma, SDMA_HOSTOVR,
-				    BIT(channel->index), 0);
+
 		/* Reset channel, making it ready to start over */
 		pdata->ccb->current_bd_paddr = pdata->ccb->base_bd_paddr;
+		dma_interrupt(channel, DMA_IRQ_CLEAR);
+		//sdma_clear_event(channel);
+		//sdma_set_overrides(channel, true, false);
 
-		dcache_writeback_invalidate_all();
-		
-		print_sdma_info(pdata, start_run);
-
-	//	return sdma_upload_context(channel);
+		dma_reg_write(channel->dma, SDMA_STOP_STAT, BIT(channel->index));
+		return 0;
+	
+		//return sdma_upload_context(channel);
 	}
 
 	return 0;
@@ -651,24 +613,12 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 		.channel = channel,
 		.elem.size = bytes,
 	};
-	static int count = 0;
-	static int crt_run = 0;
-	if (crt_run != start_run) {
-		count = 0;
-		crt_run = start_run;
-	}
-
 	int idx;
+
+	tr_dbg(&sdma_tr, "sdma_copy");
 
 	idx = (pdata->next_bd + 1) % 2;
 	pdata->next_bd = idx;
-
-	if (true || ((count % 1000 == 0 || count > 5013))) {
-		tr_info(&sdma_tr, "sdma_copy #%d run %d next_bd %d", count, start_run, pdata->next_bd);
-		if (true || (count > 5016))
-			print_sdma_info(pdata, start_run);
-	}
-	count++;
 
 	/* Work around the fact that we cannot allocate uncached memory
 	 * on all platforms supporting SDMA.
@@ -678,6 +628,7 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 	pdata->desc[idx].config |= SDMA_BD_DONE;
 	dcache_writeback_region(&pdata->desc[idx].config,
 				sizeof(pdata->desc[idx].config));
+
 
 	notifier_event(channel, NOTIFIER_ID_DMA_COPY,
 		       NOTIFIER_TARGET_CORE_LOCAL, &next, sizeof(next));
@@ -690,11 +641,8 @@ static int sdma_status(struct dma_chan_data *channel,
 {
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
 	struct sdma_bd *bd;
-	static int count = 0;
 
-	tr_err(&sdma_tr, "sdma_status %d", count);
-
-
+	tr_dbg(&sdma_tr, "sdma_status");
 	if (channel->status == COMP_STATE_INIT)
 		return -EINVAL;
 	status->state = channel->status;
@@ -704,10 +652,6 @@ static int sdma_status(struct dma_chan_data *channel,
 	status->timestamp = timer_get_system(timer_get());
 
 	bd = (struct sdma_bd *)pdata->ccb->current_bd_paddr;
-
-	if (count < 5)
-		tr_err(&sdma_tr, "sdma_status (#%d) current_bd_paddr %x", count, (int)bd);
-	count++;
 
 	switch (pdata->sdma_chan_type) {
 	case SDMA_CHAN_TYPE_AP2AP:
@@ -807,10 +751,7 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 	uint32_t sdma_script_addr;
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
 	struct sdma_bd *bd;
-	static int count = 0;
 
-	tr_err(&sdma_tr, "pre_desc CNT = %d", count++);
-	
 	/* Validate requested configuration */
 	if (config->elem_array.count > SDMA_MAX_BDS) {
 		tr_err(&sdma_tr, "sdma_set_config: Unable to handle %d descriptors",
@@ -822,7 +763,6 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 		       config->elem_array.count);
 		return -EINVAL;
 	}
-	
 	pdata->next_bd = 0;
 
 	for (i = 0; i < config->elem_array.count; i++) {
@@ -857,13 +797,8 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 			bd->config |= SDMA_BD_INT;
 
 		bd->config |= SDMA_BD_CONT;
-			if (i == 0)
-		bd->config |= SDMA_BD_DONE;
-#if 0
 		if (pdata->next_bd == i)
 			bd->config |= SDMA_BD_DONE;
-#endif
-	tr_err(&sdma_tr, "BD i = %d next_bd = %d config %08x ", i, pdata->next_bd, bd->config);
 	}
 
 	/* Configure last BD to account for cyclic transfers */
@@ -871,15 +806,12 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 		bd->config |= SDMA_BD_WRAP;
 	bd->config &= ~SDMA_BD_CONT;
 
-	tr_err(&sdma_tr, "BD i = %d next_bd = %d config %08x ", i, pdata->next_bd, bd->config);
-
 	/* CCB must point to buffer descriptors array */
 	memset(pdata->ccb, 0, sizeof(*pdata->ccb));
 	pdata->ccb->base_bd_paddr = (uint32_t)pdata->desc;
 	pdata->ccb->current_bd_paddr = (uint32_t)pdata->desc;
 	pdata->desc_count = config->elem_array.count;
 
-	
 	/* Context must be configured, dependent on transfer direction */
 
 	switch (pdata->sdma_chan_type) {
@@ -929,12 +861,10 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 static int sdma_set_config(struct dma_chan_data *channel,
 			   struct dma_sg_config *config)
 {
-	//struct sdma_chan *pdata = dma_chan_get_data(channel);
+	struct sdma_chan *pdata = dma_chan_get_data(channel);
 	int ret;
 
-	start_run++;
-
-	tr_info(&sdma_tr, "sdma_set_config channel %d, start_run %d", channel->index, start_run);
+	tr_info(&sdma_tr, "sdma_set_config channel %d", channel->index);
 
 	ret = sdma_read_config(channel, config);
 	if (ret < 0)
@@ -947,8 +877,10 @@ static int sdma_set_config(struct dma_chan_data *channel,
 	if (ret < 0)
 		return ret;
 
-
-	dcache_writeback_invalidate_all();
+	dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index), SDMA_DEFPRI);
+	sdma_set_overrides(channel, false, false);
+	sdma_disable_channel(channel->dma, channel->index);
+	sdma_set_event(channel, pdata->hw_event);
 
 	/* Upload context */
 	ret = sdma_upload_context(channel);
@@ -959,10 +891,8 @@ static int sdma_set_config(struct dma_chan_data *channel,
 
 	tr_dbg(&sdma_tr, "SDMA context uploaded");
 	/* Context uploaded, we can set up events now */
-	//sdma_set_event(channel, pdata->hw_event);
 
 	/* Finally set channel priority */
-	//dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index), SDMA_DEFPRI);
 
 	channel->status = COMP_STATE_PREPARE;
 
@@ -1055,7 +985,6 @@ static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 			continue; /* These belong to SDMA controller */
 		result_data += pdata->desc[i].config &
 			SDMA_BD_COUNT_MASK;
-		break;
 	}
 
 	*avail = *free = 0;

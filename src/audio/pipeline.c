@@ -1048,6 +1048,7 @@ void pipeline_schedule_copy(struct pipeline *p, uint64_t start)
 	if (!pipeline_is_timer_driven(p))
 		sa_set_panic_on_delay(false);
 
+	pipe_err(p, "pipeline_schedule_copy start %d period %d", (int)start, (int)p->ipc_pipe.period);
 	schedule_task(p->pipe_task, start, p->ipc_pipe.period);
 }
 
@@ -1067,7 +1068,7 @@ static enum task_state pipeline_task(void *arg)
 	struct pipeline *p = arg;
 	int err;
 
-	pipe_dbg(p, "pipeline_task()");
+	pipe_err(p, "pipeline_task() xrun %d", p->xrun_bytes);
 
 	/* are we in xrun ? */
 	if (p->xrun_bytes) {

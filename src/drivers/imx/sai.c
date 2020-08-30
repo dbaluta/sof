@@ -332,22 +332,29 @@ static void sai_handler(void *data)
 	static int count = 0;
 	
 	if (count < 5)
-		dai_err(dai, "IRQ count %d tcsr %08x flags %08x", count++, tcsr, flags);
+		dai_err(dai, "IRQ count %d tcsr %08x flags %08x", count, tcsr, flags);
 
 	if(!flags)
 		goto irq_rx;
 
 	if (flags & REG_SAI_CSR_FEF)
-		tcsr |= REG_SAI_CSR_FR;
+		tcsr |= REG_SAI_CSR_FR | REG_SAI_CSR_SR;
  
 	flags &= FSL_SAI_CSR_xF_W_MASK;
 	tcsr &= ~FSL_SAI_CSR_xF_MASK;
 
-	if (count < 5)
-		dai_err(dai, "IRQ count %d tcsr %08x flags %08x -> | %08x", count++, tcsr, flags, flags | tcsr);
+	if (count % 50  == 0)
+		dai_err(dai, "IRQ count %d tcsr %08x flags %08x -> | %08x", count, tcsr, flags, flags | tcsr);
 
 	if(flags)
 		dai_write(dai, REG_SAI_TCSR, flags | tcsr);
+
+	dai_update_bits(dai, REG_SAI_TCSR, REG_SAI_CSR_SR, REG_SAI_CSR_SR);
+	dai_update_bits(dai, REG_SAI_RCSR, REG_SAI_CSR_SR, REG_SAI_CSR_SR);
+
+	/* Clear SR bit to finish the reset */
+	dai_update_bits(dai, REG_SAI_TCSR, REG_SAI_CSR_SR, 0U);
+	dai_update_bits(dai, REG_SAI_RCSR, REG_SAI_CSR_SR, 0U);
 
 	count++;
 	//	write32(sai_addr + FSL_SAI_TCSR(offset), flags | tcsr);

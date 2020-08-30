@@ -58,7 +58,7 @@ dnl     period, priority, core, time_domain)
 DAI_ADD(sof/pipe-dai-playback.m4,
 	1, SAI, 3, sai3-wm8960-hifi,
 	PIPELINE_SOURCE_1, 2, s32le,
-	1000, 0, 0, SCHEDULE_TIME_DOMAIN_DMA)
+	1000, 0, 0, SCHEDULE_TIME_DOMAIN_TIMER)
 
 # capture DAI is SAI3 using 2 periods
 # Buffers use s32le format, with 48 frame per 1000us on core 0 with priority 0

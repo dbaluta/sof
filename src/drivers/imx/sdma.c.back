@@ -558,7 +558,7 @@ static int sdma_start(struct dma_chan_data *channel)
 
 	sdma_set_event(channel, pdata->hw_event);
 
-	//dma_reg_update_bits(channel->dma, SDMA_HOSTOVR, BIT(channel->index), 0);
+	dma_reg_update_bits(channel->dma, SDMA_HOSTOVR, BIT(channel->index), 0);
 	dma_reg_write(channel->dma, SDMA_HSTART, BIT(channel->index));
 
 	return 0;
