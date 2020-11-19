@@ -12,6 +12,8 @@
 #include <sof/bit.h>
 #include <sof/lib/dai.h>
 #include <sof/trace/trace.h>
+#include <ipc/dai.h>
+#include <ipc/dai-imx.h>
 #include <user/trace.h>
 
 #ifdef CONFIG_IMX8M
@@ -249,4 +251,11 @@
 #define SAI_TDM_SLOTS		2
 
 extern const struct dai_driver sai_driver;
+
+/* SAI private data */
+struct sai_pdata {
+	struct sof_ipc_dai_config config;
+	struct sof_ipc_dai_sai_params params;
+};
+
 #endif /*__SOF_DRIVERS_SAI_H__ */
