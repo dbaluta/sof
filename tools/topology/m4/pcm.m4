@@ -96,7 +96,7 @@ define(`PCM_CAPABILITIES',
 dnl PCM_PLAYBACK_ADD(name, pcm_id, playback)
 define(`PCM_PLAYBACK_ADD',
 `ifelse(`$#', `3',
-PCM_PLAYBACK_ADD_COMMON($1, $2, $3, false),
+PCM_PLAYBACK_ADD_COMMON($1, $2, $3, true),
 `fatal_error(`Invalid parameters ($#) to PCM_PLAYBACK_ADD')')'
 )
 
