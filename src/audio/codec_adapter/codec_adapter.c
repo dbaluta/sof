@@ -17,28 +17,92 @@
 #include <sof/audio/buffer.h>
 #include <sof/audio/component.h>
 #include <sof/audio/codec_adapter/codec_adapter.h>
+#include <sof/audio/codec_adapter/codec/generic.h>
 #include <sof/audio/pipeline.h>
 #include <sof/common.h>
 #include <sof/platform.h>
 #include <sof/ut.h>
 
-static const struct comp_driver comp_codec_adapter;
+static inline int validate_setup_config(struct ca_config *cfg)
+{
+	/* TODO: validate codec_adapter setup parameters */
+	return 0;
+}
 
-/* d8218443-5ff3-4a4c-b388-6cfe07b956aa */
-DECLARE_SOF_RT_UUID("codec_adapter", ca_uuid, 0xd8218443, 0x5ff3, 0x4a4c,
-		    0xb3, 0x88, 0x6c, 0xfe, 0x07, 0xb9, 0x56, 0xaa);
+/**
+ * \brief Load setup config for both codec adapter and codec library.
+ * \param[in] dev - codec adapter component device pointer.
+ * \param[in] cfg - pointer to the configuration data.
+ * \param[in] size - size of config.
+ *
+ * The setup config comprises of two parts - one contains essential data
+ * for the initialization of codec_adapter and follows struct ca_config.
+ * Second contains codec specific data needed to setup the codec itself.
+ * The latter is send in a TLV format organized by struct codec_param.
+ *
+ * \return integer representing either:
+ *	0 -> success
+ *	negative value -> failure.
+ */
+static int load_setup_config(struct comp_dev *dev, void *cfg, uint32_t size)
+{
+	int ret;
+	void *lib_cfg;
+	size_t lib_cfg_size;
+	struct comp_data *cd = comp_get_drvdata(dev);
 
-DECLARE_TR_CTX(ca_tr, SOF_UUID(ca_uuid), LOG_LEVEL_INFO);
+	comp_dbg(dev, "load_setup_config() start.");
+
+	if (!dev) {
+		comp_err(dev, "load_setup_config(): no component device.");
+		ret = -EINVAL;
+		goto end;
+	} else if (!cfg || !size) {
+		comp_err(dev, "load_setup_config(): no config available cfg: %x, size: %d",
+			 (uintptr_t)cfg, size);
+		ret = -EINVAL;
+		goto end;
+	} else if (size <= sizeof(struct ca_config)) {
+		comp_err(dev, "load_setup_config(): no codec config available.");
+		ret = -EIO;
+		goto end;
+	}
+	/* Copy codec_adapter part */
+	ret = memcpy_s(&cd->ca_config, sizeof(cd->ca_config), cfg,
+		       sizeof(struct ca_config));
+	assert(!ret);
+	ret = validate_setup_config(&cd->ca_config);
+	if (ret) {
+		comp_err(dev, "load_setup_config(): validation of setup config for codec_adapter failed.");
+		goto end;
+	}
+	/* Copy codec specific part */
+	lib_cfg = (char *)cfg + sizeof(struct ca_config);
+	lib_cfg_size = size - sizeof(struct ca_config);
+	ret = codec_load_config(dev, lib_cfg, lib_cfg_size, CODEC_CFG_SETUP);
+	if (ret) {
+		comp_err(dev, "load_setup_config(): %d: failed to load setup config for codec id %x",
+			 ret, cd->ca_config.codec_id);
+		goto end;
+	}
+
+	comp_dbg(dev, "load_setup_config() done.");
+end:
+	return ret;
+}
 
 /**
  * \brief Create a codec adapter component.
  * \param[in] drv - component driver pointer.
- * \param[in] comp - component ipc descriptor pointer.
+ * \param[in] comp - component ipc descriptor pointer
+ * \param[in] interface - codec interface containing codec API
+ * implementation
  *
  * \return: a pointer to newly created codec adapter component.
  */
-static struct comp_dev *codec_adapter_new(const struct comp_driver *drv,
-					  struct sof_ipc_comp *comp)
+struct comp_dev *codec_adapter_new(const struct comp_driver *drv,
+				   struct sof_ipc_comp *comp,
+				   struct codec_interface *interface)
 {
 	int ret;
 	struct comp_dev *dev;
@@ -82,7 +146,7 @@ static struct comp_dev *codec_adapter_new(const struct comp_driver *drv,
 		goto err;
 	}
 	/* Init processing codec */
-	ret = codec_init(dev);
+	ret = codec_init(dev, interface);
 	if (ret) {
 		comp_err(dev, "codec_adapter_new() %d: codec initialization failed",
 			 ret);
@@ -100,76 +164,6 @@ err:
 	return NULL;
 }
 
-static inline int validate_setup_config(struct ca_config *cfg)
-{
-	/* TODO: validate codec_adapter setup parameters */
-	return 0;
-}
-
-/**
- * \brief Load setup config for both codec adapter and codec library.
- * \param[in] dev - codec adapter component device pointer.
- * \param[in] cfg - pointer to the configuration data.
- * \param[in] size - size of config.
- *
- * The setup config comprises of two parts - one contains essential data
- * for the initialization of codec_adapter and follows struct ca_config.
- * Second contains codec specific data needed to setup the codec itself.
- * The latter is send in a TLV format organized by struct codec_param.
- *
- * \return integer representing either:
- *	0 -> success
- *	negative value -> failure.
- */
-static int load_setup_config(struct comp_dev *dev, void *cfg, uint32_t size)
-{
-	int ret;
-	void *lib_cfg;
-	size_t lib_cfg_size;
-	struct comp_data *cd = comp_get_drvdata(dev);
-
-	comp_dbg(dev, "load_setup_config() start.");
-
-	if (!dev) {
-		comp_err(dev, "load_setup_config(): no component device.");
-		ret = -EINVAL;
-		goto end;
-	} else if (!cfg || !size) {
-		comp_err(dev, "load_setup_config(): no config available cfg: %x, size: %d",
-			 (uintptr_t)cfg, size);
-		ret = -EINVAL;
-		goto end;
-	} else if (size < sizeof(struct ca_config)) {
-		comp_err(dev, "load_setup_config(): no codec config available, size %d", size);
-		ret = -EIO;
-		goto end;
-	}
-	/* Copy codec_adapter part */
-	ret = memcpy_s(&cd->ca_config, sizeof(cd->ca_config), cfg,
-		       sizeof(struct ca_config));
-	assert(!ret);
-	ret = validate_setup_config(&cd->ca_config);
-	if (ret) {
-		comp_err(dev, "load_setup_config(): validation of setup config for codec_adapter failed.");
-		goto end;
-	}
-	/* Copy codec specific part */
-	lib_cfg_size = size - sizeof(struct ca_config);
-	if (lib_cfg_size) {
-		lib_cfg = (char *)cfg + sizeof(struct ca_config);
-		ret = codec_load_config(dev, lib_cfg, lib_cfg_size, CODEC_CFG_SETUP);
-		if (ret) {
-			comp_err(dev, "load_setup_config(): %d: failed to load setup config for codec id %x",
-				 ret, cd->ca_config.codec_id);
-			goto end;
-		}
-	}
-
-	comp_dbg(dev, "load_setup_config() done.");
-end:
-	return ret;
-}
-
 /*
  * \brief Prepare a codec adapter component.
  * \param[in] dev - component device pointer.
@@ -178,7 +172,7 @@ end:
  *	0 - success
  *	value < 0 - failure.
  */
-static int codec_adapter_prepare(struct comp_dev *dev)
+int codec_adapter_prepare(struct comp_dev *dev)
 {
 	int ret;
 	struct comp_data *cd = comp_get_drvdata(dev);
@@ -274,7 +268,7 @@ static int codec_adapter_prepare(struct comp_dev *dev)
 	return 0;
 }
 
-static int codec_adapter_params(struct comp_dev *dev,
+int codec_adapter_params(struct comp_dev *dev,
 				    struct sof_ipc_stream_params *params)
 {
 	int ret;
@@ -363,7 +357,7 @@ static void generate_zeroes(struct comp_buffer *sink, uint32_t bytes)
 	comp_update_buffer_produce(sink, bytes);
 }
 
-static int codec_adapter_copy(struct comp_dev *dev)
+int codec_adapter_copy(struct comp_dev *dev)
 {
 	int ret = 0;
 	uint32_t bytes_to_process, copy_bytes, processed = 0, produced = 0;
@@ -639,7 +633,7 @@ static int codec_adapter_ctrl_set_data(struct comp_dev *dev,
 }
 
 /* Used to pass standard and bespoke commands (with data) to component */
-static int codec_adapter_cmd(struct comp_dev *dev, int cmd, void *data,
+int codec_adapter_cmd(struct comp_dev *dev, int cmd, void *data,
 			     int max_data_size)
 {
 	int ret;
@@ -665,14 +659,14 @@ static int codec_adapter_cmd(struct comp_dev *dev, int cmd, void *data,
 	return ret;
 }
 
-static int codec_adapter_trigger(struct comp_dev *dev, int cmd)
+int codec_adapter_trigger(struct comp_dev *dev, int cmd)
 {
 	comp_dbg(dev, "codec_adapter_trigger(): component got trigger cmd %x", cmd);
 
 	return comp_set_state(dev, cmd);
 }
 
-static int codec_adapter_reset(struct comp_dev *dev)
+int codec_adapter_reset(struct comp_dev *dev)
 {
 	int ret;
 	struct comp_data *cd = comp_get_drvdata(dev);
@@ -692,7 +686,7 @@ static int codec_adapter_reset(struct comp_dev *dev)
 	return comp_set_state(dev, COMP_TRIGGER_RESET);
 }
 
-static void codec_adapter_free(struct comp_dev *dev)
+void codec_adapter_free(struct comp_dev *dev)
 {
 	int ret;
 	struct comp_data *cd = comp_get_drvdata(dev);
@@ -708,31 +702,3 @@ static void codec_adapter_free(struct comp_dev *dev)
 	rfree(cd);
 	rfree(dev);
 }
-
-static const struct comp_driver comp_codec_adapter = {
-	.type = SOF_COMP_NONE,
-	.uid = SOF_RT_UUID(ca_uuid),
-	.tctx = &ca_tr,
-	.ops = {
-		.create = codec_adapter_new,
-		.prepare = codec_adapter_prepare,
-		.params = codec_adapter_params,
-		.copy = codec_adapter_copy,
-		.cmd = codec_adapter_cmd,
-		.trigger = codec_adapter_trigger,
-		.reset = codec_adapter_reset,
-		.free = codec_adapter_free,
-	},
-};
-
-static SHARED_DATA struct comp_driver_info comp_codec_adapter_info = {
-	.drv = &comp_codec_adapter,
-};
-
-UT_STATIC void sys_comp_codec_adapter_init(void)
-{
-	comp_register(platform_shared_get(&comp_codec_adapter_info,
-					  sizeof(comp_codec_adapter_info)));
-}
-
-DECLARE_MODULE(sys_comp_codec_adapter_init);
