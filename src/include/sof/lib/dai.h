@@ -80,6 +80,7 @@ struct dai_ops {
 	int (*hw_params)(struct dai *dai, struct sof_ipc_stream_params *params);
 	int (*get_handshake)(struct dai *dai, int direction, int stream_id);
 	int (*get_fifo)(struct dai *dai, int direction, int stream_id);
+	int (*get_srcid)(struct dai *dai, int direction, int stream_id);
 	int (*probe)(struct dai *dai);
 	int (*remove)(struct dai *dai);
 };
@@ -142,6 +143,8 @@ struct dai_plat_data {
 	int irq;
 	const char *irq_name;
 	uint32_t flags;
+	int dmamux_rx_num;
+	int dmamux_tx_num;
 	struct dai_plat_fifo_data fifo[2];
 };
 
@@ -329,7 +332,6 @@ static inline int dai_set_config(struct dai *dai,
 {
 	int ret = dai->drv->ops.set_config(dai, config);
 
-
 	return ret;
 }
 
@@ -339,7 +341,6 @@ static inline int dai_set_config(struct dai *dai,
 static inline int dai_trigger(struct dai *dai, int cmd, int direction)
 {
 	int ret = dai->drv->ops.trigger(dai, cmd, direction);
-
 
 	return ret;
 }
@@ -351,7 +352,6 @@ static inline int dai_pm_context_store(struct dai *dai)
 {
 	int ret = dai->drv->ops.pm_context_store(dai);
 
-
 	return ret;
 }
 
@@ -361,7 +361,6 @@ static inline int dai_pm_context_store(struct dai *dai)
 static inline int dai_pm_context_restore(struct dai *dai)
 {
 	int ret = dai->drv->ops.pm_context_restore(dai);
-
 
 	return ret;
 }
@@ -374,7 +373,6 @@ static inline int dai_get_hw_params(struct dai *dai,
 				    int dir)
 {
 	int ret = dai->drv->ops.get_hw_params(dai, params, dir);
-
 
 	return ret;
 }
@@ -401,7 +399,6 @@ static inline int dai_get_handshake(struct dai *dai, int direction,
 {
 	int ret = dai->drv->ops.get_handshake(dai, direction, stream_id);
 
-
 	return ret;
 }
 
@@ -413,6 +410,16 @@ static inline int dai_get_fifo(struct dai *dai, int direction,
 {
 	int ret = dai->drv->ops.get_fifo(dai, direction, stream_id);
 
+	return ret;
+}
+
+/**
+ * \brief Get Digital Audio dma srcid
+ */
+static inline int dai_get_srcid(struct dai *dai, int direction,
+			       int stream_id)
+{
+	int ret = dai->drv->ops.get_srcid(dai, direction, stream_id);
 
 	return ret;
 }
@@ -424,7 +431,6 @@ static inline int dai_probe(struct dai *dai)
 {
 	int ret = dai->drv->ops.probe(dai);
 
-
 	return ret;
 }
 
@@ -434,7 +440,6 @@ static inline int dai_probe(struct dai *dai)
 static inline int dai_remove(struct dai *dai)
 {
 	int ret = dai->drv->ops.remove(dai);
-
 
 	return ret;
 }
