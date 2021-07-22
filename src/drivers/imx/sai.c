@@ -31,6 +31,7 @@ static void sai_start(struct dai *dai, int direction)
 {
 	dai_info(dai, "SAI: sai_start");
 
+	int chan_idx = 0;
 	uint32_t xcsr = 0U;
 
 	if (direction == DAI_DIR_CAPTURE) {
@@ -88,9 +89,16 @@ static void sai_start(struct dai *dai, int direction)
 			REG_SAI_MCTL_MCLK_EN);
 #endif
 
+	chan_idx = BIT(0);
+	/* RX2 supports capture on imx8ulp */
+#ifdef CONFIG_IMX8ULP
+	if (direction == DAI_DIR_CAPTURE)
+		chan_idx = BIT(2);
+#endif
+
 	/* transmit/receive data channel enable */
 	dai_update_bits(dai, REG_SAI_XCR3(direction),
-			REG_SAI_CR3_TRCE_MASK, REG_SAI_CR3_TRCE(1));
+			REG_SAI_CR3_TRCE_MASK, REG_SAI_CR3_TRCE(chan_idx));
 
 	/* transmitter/receiver enable */
 	dai_update_bits(dai, REG_SAI_XCSR(direction),
@@ -397,6 +405,11 @@ static int sai_get_fifo(struct dai *dai, int direction, int stream_id)
 	}
 }
 
+static int sai_get_srcid(struct dai *dai, int direction, int stream_id)
+{
+	return direction ? dai->plat_data.dmamux_rx_num : dai->plat_data.dmamux_tx_num;
+}
+
 static int sai_get_hw_params(struct dai *dai,
 			     struct sof_ipc_stream_params *params,
 			     int dir)
@@ -425,6 +438,7 @@ const struct dai_driver sai_driver = {
 		.probe			= sai_probe,
 		.get_handshake		= sai_get_handshake,
 		.get_fifo		= sai_get_fifo,
+		.get_srcid		= sai_get_srcid,
 		.get_hw_params		= sai_get_hw_params,
 	},
 };
