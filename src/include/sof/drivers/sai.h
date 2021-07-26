@@ -251,8 +251,14 @@
  * configured for an internal bit clock.
  * The division value is (DIV + 1) * 2.
  */
+#ifndef CONFIG_IMX8ULP
 #define SAI_CLOCK_DIV		0x7
 #define SAI_TDM_SLOTS		2
+#else
+/* expect get frame clk is 16kHz, mono channel and 16bit word on 8ulp */
+#define SAI_CLOCK_DIV		0x17
+#define SAI_TDM_SLOTS		1
+#endif
 
 extern const struct dai_driver sai_driver;
 
