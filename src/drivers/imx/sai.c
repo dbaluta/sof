@@ -397,6 +397,11 @@ static int sai_get_fifo(struct dai *dai, int direction, int stream_id)
 	}
 }
 
+static int sai_get_srcid(struct dai *dai, int direction, int stream_id)
+{
+	return direction ? dai->plat_data.dmamux_rx_num : dai->plat_data.dmamux_tx_num;
+}
+
 static int sai_get_hw_params(struct dai *dai,
 			     struct sof_ipc_stream_params *params,
 			     int dir)
@@ -425,6 +430,7 @@ const struct dai_driver sai_driver = {
 		.probe			= sai_probe,
 		.get_handshake		= sai_get_handshake,
 		.get_fifo		= sai_get_fifo,
+		.get_srcid		= sai_get_srcid,
 		.get_hw_params		= sai_get_hw_params,
 	},
 };
