@@ -18,6 +18,8 @@
 
 #ifdef CONFIG_IMX8M
 #define SAI_OFS		8
+#elif CONFIG_IMX8ULP
+#define SAI_OFS		8
 #else
 #define SAI_OFS		0
 #endif
@@ -239,6 +241,8 @@
 
 #ifdef CONFIG_IMX8M
 #define SAI_FIFO_WORD_SIZE	128
+#elif defined CONFIG_IMX8ULP
+#define SAI_FIFO_WORD_SIZE	16
 #else
 #define SAI_FIFO_WORD_SIZE	64
 #endif
