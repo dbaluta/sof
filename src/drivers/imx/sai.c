@@ -31,6 +31,7 @@ static void sai_start(struct dai *dai, int direction)
 {
 	dai_info(dai, "SAI: sai_start");
 
+	int chan_idx = 0;
 	uint32_t xcsr = 0U;
 
 	if (direction == DAI_DIR_CAPTURE) {
@@ -88,9 +89,16 @@ static void sai_start(struct dai *dai, int direction)
 			REG_SAI_MCTL_MCLK_EN);
 #endif
 
+	chan_idx = BIT(0);
+	/* RX2 supports capture on imx8ulp */
+#ifdef CONFIG_IMX8ULP
+	if (direction == DAI_DIR_CAPTURE)
+		chan_idx = BIT(2);
+#endif
+
 	/* transmit/receive data channel enable */
 	dai_update_bits(dai, REG_SAI_XCR3(direction),
-			REG_SAI_CR3_TRCE_MASK, REG_SAI_CR3_TRCE(1));
+			REG_SAI_CR3_TRCE_MASK, REG_SAI_CR3_TRCE(chan_idx));
 
 	/* transmitter/receiver enable */
 	dai_update_bits(dai, REG_SAI_XCSR(direction),
@@ -157,7 +165,13 @@ static inline int sai_set_config(struct dai *dai,
 	uint32_t mask_cr2 = 0, mask_cr4 = 0, mask_cr5 = 0;
 	struct sai_pdata *sai = dai_get_drvdata(dai);
 	/* TODO: this value will be provided by config */
+#ifndef CONFIG_IMX8ULP
 	uint32_t sywd = 32;
+	uint32_t twm = ~(BIT(0) | BIT(1));
+#else
+	uint32_t sywd = 16;
+	uint32_t twm = ~BIT(0);
+#endif
 
 	sai->config = *config;
 	sai->params = config->sai;
@@ -296,7 +310,7 @@ static inline int sai_set_config(struct dai *dai,
 	dai_update_bits(dai, REG_SAI_XCR5(REG_TX_DIR), mask_cr5, val_cr5);
 	/* turn on (set to zero) stereo slot */
 	dai_update_bits(dai, REG_SAI_XMR(REG_TX_DIR),  REG_SAI_XMR_MASK,
-			~(BIT(0) | BIT(1)));
+		       twm);
 
 	val_cr2 |= REG_SAI_CR2_SYNC;
 	mask_cr2 |= REG_SAI_CR2_SYNC_MASK;
@@ -309,7 +323,7 @@ static inline int sai_set_config(struct dai *dai,
 	dai_update_bits(dai, REG_SAI_XCR5(REG_RX_DIR), mask_cr5, val_cr5);
 	/* turn on (set to zero) stereo slot */
 	dai_update_bits(dai, REG_SAI_XMR(REG_RX_DIR), REG_SAI_XMR_MASK,
-			~(BIT(0) | BIT(1)));
+			twm);
 
 	return 0;
 }
