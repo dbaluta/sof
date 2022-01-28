@@ -64,3 +64,21 @@ void wait_delay(uint64_t number_of_clks)
 	while ((platform_timer_get(timer) - current) < number_of_clks)
 		idelay(PLATFORM_DEFAULT_DELAY);
 }
+
+void wait_delay_ms(uint64_t ms)
+{
+	struct timer *timer = timer_get();
+	uint64_t timeout = platform_timer_timeout_calc_ms(timer, ms);
+
+	while (platform_timer_get(timer) < timeout)
+		idelay(PLATFORM_DEFAULT_DELAY);
+}
+
+void wait_delay_us(uint64_t us)
+{
+	struct timer *timer = timer_get();
+	uint64_t timeout = platform_timer_timeout_calc_us(timer, us);
+
+	while (platform_timer_get(timer) < timeout)
+		idelay(PLATFORM_DEFAULT_DELAY);
+}
