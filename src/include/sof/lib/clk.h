@@ -60,9 +60,9 @@ uint64_t clock_ms_to_ticks(int clock, uint64_t ms);
 
 uint64_t clock_us_to_ticks(int clock, uint64_t us);
 
-uint64_t clock_ticks_per_sample(int clock, uint32_t sample_rate);
+uint64_t clock_ns_to_ticks(int clock, uint64_t ns);
 
-void platform_timer_set_delta(struct timer *timer, uint64_t ns);
+uint64_t clock_ticks_per_sample(int clock, uint32_t sample_rate);
 
 static inline struct clock_info *clocks_get(void)
 {
