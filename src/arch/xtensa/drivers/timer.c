@@ -12,6 +12,8 @@
 #include <errno.h>
 #include <stdint.h>
 
+#ifndef __ZEPHYR__
+
 void timer_64_handler(void *arg)
 {
 	struct timer *timer = arg;
@@ -144,3 +146,5 @@ out:
 
 	return ret;
 }
+
+#endif

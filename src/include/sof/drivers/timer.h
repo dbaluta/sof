@@ -8,13 +8,17 @@
 #ifndef __SOF_DRIVERS_TIMER_H__
 #define __SOF_DRIVERS_TIMER_H__
 
-#include <arch/drivers/timer.h>
+#include <stdint.h>
 #include <sof/lib/cpu.h>
 #include <sof/sof.h>
-#include <stdint.h>
+#include <sof/platform.h>
 
 struct comp_dev;
 struct sof_ipc_stream_posn;
+
+#ifndef __ZEPHYR__
+
+#include <arch/drivers/timer.h>
 
 #define TIMER0	0
 #define TIMER1	1
@@ -75,6 +79,22 @@ static inline uint64_t platform_safe_get_time(struct timer *timer)
 
 void platform_timer_start(struct timer *timer);
 void platform_timer_stop(struct timer *timer);
+
+#define k_ms_to_cyc_ceil64(ms)		clock_ms_to_ticks(PLATFORM_DEFAULT_CLOCK, ms)
+#define k_us_to_cyc_ceil64(us)		clock_us_to_ticks(PLATFORM_DEFAULT_CLOCK, us)
+#define k_ns_to_cyc_near64(ns)		clock_ns_to_ticks(PLATFORM_DEFAULT_CLOCK, ns)
+
+#define k_cyc_to_ms_near64(ticks)	((ticks) / clock_ms_to_ticks(PLATFORM_DEFAULT_CLOCK, 1))
+#define k_cyc_to_us_near64(ticks)	((ticks) / clock_us_to_ticks(PLATFORM_DEFAULT_CLOCK, 1))
+
+#define k_cycle_get_64()		platform_timer_get(timer_get())
+#define k_cycle_get_64_atomic()		platform_timer_get_atomic(timer_get())
+#define k_cycle_get_64_safe()		platform_safe_get_time(timer_get())
+#else
+#define k_cycle_get_64_safe()		k_cycle_get_64()
+#define k_cycle_get_64_atomic()		k_cycle_get_64()
+#define platform_timer_stop(x)
+#endif /* __ZEPHYR__ */
 
 /* get timestamp for host stream DMA position */
 void platform_host_timestamp(struct comp_dev *host,
