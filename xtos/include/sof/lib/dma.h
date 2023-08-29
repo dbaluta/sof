@@ -242,7 +242,7 @@ struct dma_chan_data {
 	uint64_t period;	/* DMA channel's transfer period in us */
 	/* true if this DMA channel is the scheduling source */
 	bool is_scheduling_source;
-
+	bool sw_done;
 	/* device specific data set by the device that requests the DMA channel */
 	void *dev_data;
 

@@ -69,6 +69,7 @@ struct sdma_chan {
 	int next_bd;
 	int sdma_chan_type;
 	int fifo_paddr;
+	bool sw_done;
 };
 
 /* Private data for the whole controller */
@@ -427,6 +428,7 @@ static void sdma_enable_event(struct dma_chan_data *channel, int eventnum)
 
 	dma_reg_update_bits(channel->dma, SDMA_CHNENBL(eventnum),
 			    BIT(channel->index), BIT(channel->index));
+	dma_reg_update_bits(channel->dma, SDMA_DONE0_CONFIG, 0xFF, 0x9F);
 }
 
 static void sdma_disable_event(struct dma_chan_data *channel, int eventnum)
@@ -750,6 +752,12 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 		return -EINVAL;
 	}
 
+	if (pdata->sw_done) {
+		watermark |= SDMA_WATERMARK_LEVEL_SW_DONE;
+		/*TODO: get this information from DAI */
+		watermark |= SDMA_WATERMARK_LEVEL_N_FIFOS_BITS(2);
+	}
+
 	watermark = (config->burst_elems * width) / 8;
 
 	memset(pdata->ctx, 0, sizeof(*pdata->ctx));
@@ -766,8 +774,9 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 				pdata->ctx->g_reg[1] |= BIT(pdata->hw_event);
 		}
 		pdata->ctx->g_reg[6] = pdata->fifo_paddr;
-		pdata->ctx->g_reg[7] = watermark;
+		pdata->ctx->g_reg[7] = watermark ; //0x00802030;
 	}
+
 
 	dcache_writeback_region(pdata->desc, sizeof(pdata->desc));
 	dcache_writeback_region(pdata->ccb, sizeof(*pdata->ccb));
