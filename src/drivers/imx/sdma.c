@@ -80,6 +80,7 @@ struct sdma_pdata {
 	struct sdma_chan *chan_pdata;
 	struct sdma_context *contexts;
 	struct sdma_ccb *ccb_array;
+	int fw_loaded;
 };
 
 static void sdma_set_overrides(struct dma_chan_data *channel,
@@ -353,6 +354,7 @@ static int sdma_probe(struct dma *dma)
 		tr_err(&sdma_tr, "SDMA: Failed to load firmware");
 		goto err;
 	}
+	pdata->fw_loaded = true;
 #endif
 
 	goto out;
@@ -609,12 +611,23 @@ static int sdma_read_config(struct dma_chan_data *channel,
 {
 	int i;
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
+	struct dai_data *dd = channel->dev_data;
+	uint32_t dma_dev = dd->dai->drv->dma_dev;
 
 	switch (config->direction) {
 	case DMA_DIR_MEM_TO_DEV:
 		pdata->hw_event = config->dest_dev;
 		pdata->sdma_chan_type = SDMA_CHAN_TYPE_MCU2SHP;
 		pdata->fifo_paddr = config->elem_array.elems[0].dest;
+
+		if (dma_dev == DMA_DEV_MICFIL) {
+			if (pdata->fw_loaded) {
+				pdata->sdma_chan_type = SDMA_SCRIPT_SAI2MCU_OFF;
+				pdata->sw_done = true;
+			} else {
+				return -EINVAL;
+			}
+		}
 		break;
 	case DMA_DIR_DEV_TO_MEM:
 		pdata->hw_event = config->src_dev;
@@ -761,6 +774,9 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 		break;
 	case SDMA_CHAN_TYPE_SHP2MCU:
 		sdma_script_addr = SDMA_SCRIPT_SHP2MCU_OFF;
+		break;
+	case SDMA_CHAN_TYPE_SAI2MCU:
+		sdma_script_addr = SDMA_SCRIPT_SAI2MCU_OFF;
 		break;
 	default:
 		/* This case doesn't happen; we need to assign the other cases
