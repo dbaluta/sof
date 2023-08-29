@@ -590,6 +590,8 @@ void heap_trace_all(int force)
 {
 	struct mm *memmap = memmap_get();
 
+	return;
+
 	/* has heap changed since last shown */
 	if (memmap->heap_trace_updated || force) {
 		tr_info(&mem_tr, "heap: system status");

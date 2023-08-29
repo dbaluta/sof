@@ -18,6 +18,11 @@ if(CONFIG_IMX_SDMA)
 	add_local_sources(sof sdma.c)
 endif()
 
+if(CONFIG_IMX_MICFIL)
+	add_local_sources(sof micfil.c)
+endif()
+
+
 if(CONFIG_IMX_INTERRUPT_IRQSTEER)
 	add_local_sources(sof interrupt-irqsteer.c)
 elseif(CONFIG_IMX_INTERRUPT_GENERIC)

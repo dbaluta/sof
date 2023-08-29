@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: BSD-3-Clause
+//
+// Copyright(c) 2017 Intel Corporation. All rights reserved.
+//
+// Author: Seppo Ingalsuo <seppo.ingalsuo@linux.intel.com>
+
+#include <sof/audio/component.h>
+#include <sof/audio/format.h>
+#include <rtos/alloc.h>
+#include <sof/drivers/micfil.h>
+#include <sof/lib/dai.h>
+#include <sof/lib/dma.h>
+#include <sof/lib/memory.h>
+#include <sof/lib/pm_runtime.h>
+#include <sof/lib/uuid.h>
+#include <ipc/dai.h>
+#include <errno.h>
+#include <stddef.h>
+#include <stdint.h>
+
+LOG_MODULE_REGISTER(micfil_dai, CONFIG_SOF_LOG_LEVEL);
+
+/* dd400475-35d7-4045-ab03-0c34957d7a08 */
+DECLARE_SOF_UUID("micfil-dai", micfil_uuid, 0xdd400475, 0x35d7, 0x4045,
+		 0xab, 0x03, 0x0c, 0x34, 0x95, 0x7d, 0x7a, 0x08);
+
+DECLARE_TR_CTX(micfil_tr, SOF_UUID(micfil_uuid), LOG_LEVEL_INFO);
+
+static int micfil_get_hw_params(struct dai *dai,
+			      struct sof_ipc_stream_params *params, int dir)
+{
+	return 0;
+}
+
+static int micfil_set_config(struct dai *dai, struct ipc_config_dai *common_config,
+			   const void *spec_config)
+{
+	return 0;
+}
+
+static int micfil_trigger(struct dai *dai, int cmd, int direction)
+{
+	return 0;
+}
+
+static int micfil_probe(struct dai *dai)
+{
+	struct micfil_pdata *micfil;
+
+	dai_info(dai, "micfil_probe()");
+
+	micfil = rzalloc(SOF_MEM_ZONE_RUNTIME_SHARED, 0, SOF_MEM_CAPS_RAM, sizeof(*micfil));
+	if (!micfil) {
+		dai_err(dai, "micfil probe failed");
+		return -ENOMEM;
+	}
+
+	dai_set_drvdata(dai, micfil);
+	return 0;
+}
+
+static int micfil_remove(struct dai *dai)
+{
+	struct micfil_pdata *micfil = dai_get_drvdata(dai);
+
+	dai_info(dai, "micfil_remove()");
+	
+	rfree(micfil);
+	dai_set_drvdata(dai, NULL);
+
+	return 0;
+}
+
+static int micfil_get_handshake(struct dai *dai, int direction, int stream_id)
+{
+	return 0;
+}
+
+static int micfil_get_fifo(struct dai *dai, int direction, int stream_id)
+{
+	return 0;
+}
+
+static int micfil_get_fifo_depth(struct dai *dai, int direction)
+{
+	return 0;
+}
+
+const struct dai_driver micfil_driver = {
+	.type = SOF_DAI_IMX_MICFIL,
+	.uid = SOF_UUID(micfil_uuid),
+	.tctx = &micfil_tr,
+//	.dma_caps = DMA_CAP_GP_LP | DMA_CAP_GP_HP,
+//	.dma_dev = DMA_DEV_DMIC,
+	.ops = {
+		.trigger		= micfil_trigger,
+		.set_config		= micfil_set_config,
+		.get_hw_params		= micfil_get_hw_params,
+		.get_handshake		= micfil_get_handshake,
+		.get_fifo		= micfil_get_fifo,
+		.get_fifo_depth		= micfil_get_fifo_depth,
+		.probe			= micfil_probe,
+		.remove			= micfil_remove,
+//		.copy			= micfil_gain_ramp,
+	},
+};

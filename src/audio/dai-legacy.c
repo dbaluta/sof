@@ -200,7 +200,7 @@ static struct comp_dev *dai_new(const struct comp_driver *drv,
 	struct dai_data *dd;
 	int ret;
 
-	comp_cl_dbg(&comp_dai, "dai_new()");
+	comp_cl_err(&comp_dai, "dai_new()");
 
 	dev = comp_alloc(drv, sizeof(*dev));
 	if (!dev)

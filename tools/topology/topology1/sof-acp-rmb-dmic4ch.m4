@@ -58,6 +58,7 @@ PIPELINE_PCM_ADD(sof/pipe-passthrough-capture.m4,
 
 # Capture DAI is ACPHS using 2 periods
 DAI_ADD(sof/pipe-dai-capture.m4, 3, ACPHS, 0, acp-headset-codec,
+
 PIPELINE_SINK_3, 2, s16le, 2000, 0, 0, SCHEDULE_TIME_DOMAIN_DMA)
 
 # PCM  id 0
@@ -77,9 +78,9 @@ DAI_ADD(sof/pipe-dai-capture.m4, 4, ACPDMIC, 0, acp-dmic-codec,
 PIPELINE_SINK_4, 2, s32le, 2000, 0, 0, SCHEDULE_TIME_DOMAIN_DMA)
 
 dnl DAI_CONFIG(type, dai_index, link_id, name, acpdmic_config)
-DAI_CONFIG(ACPDMIC, 3, 2, acp-dmic-codec,
+DAI_CONFIG(ACPDMIC, 3, 0, acp-dmic-codec,
 	   ACPDMIC_CONFIG(ACPDMIC_CONFIG_DATA(ACPDMIC, 3, 48000, 4)))
 
 # PCM id 1
-PCM_CAPTURE_ADD(DMIC, 2, PIPELINE_PCM_4)
+PCM_CAPTURE_ADD(DMIC, 1, PIPELINE_PCM_1)
 #/**********************************************************************************/

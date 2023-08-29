@@ -21,6 +21,14 @@ config IMX_ESAI
 	help
 	  Select this to enable support for i.MX ESAI IP.
 
+config IMX_MICFIL
+	bool "i.MX MICFIL PDM driver"
+	default n
+	depends on IMX
+	help
+	  Select this to enable support for i.MX MICFIL IP.
+
+
 config IMX_INTERRUPT_IRQSTEER
 	bool
 	default n

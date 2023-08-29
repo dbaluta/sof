@@ -232,7 +232,7 @@ static int ipc_stream_pcm_params(uint32_t stream)
 	if (!cpu_is_me(pcm_dev->core))
 		return ipc_process_on_core(pcm_dev->core, false);
 
-	tr_dbg(&ipc_tr, "ipc: comp %d -> params", pcm_params.comp_id);
+	tr_err(&ipc_tr, "ipc: comp %d -> params", pcm_params.comp_id);
 
 	/* sanity check comp */
 	if (!pcm_dev->cd->pipeline) {
@@ -315,6 +315,7 @@ static int ipc_stream_pcm_params(uint32_t stream)
 pipe_params:
 #endif
 
+	tr_err(&ipc_tr, "ipc: comp %d -> params (2) ", pcm_params.comp_id);
 	/* configure pipeline audio params */
 	err = pipeline_params(pcm_dev->cd->pipeline, pcm_dev->cd,
 			(struct sof_ipc_pcm_params *)ipc_get()->comp_data);
@@ -325,6 +326,8 @@ pipe_params:
 		goto error;
 	}
 
+	tr_err(&ipc_tr, "ipc: comp %d -> params (3) ", pcm_params.comp_id);
+
 	/* prepare pipeline audio params */
 	err = pipeline_prepare(pcm_dev->cd->pipeline, pcm_dev->cd);
 	if (err < 0) {
@@ -333,6 +336,10 @@ pipe_params:
 			    pcm_params.comp_id, err);
 		goto error;
 	}
+
+
+	tr_err(&ipc_tr, "ipc: comp %d -> params (4) ", pcm_params.comp_id);
+
 
 	/* write component values to the outbox */
 	reply.rhdr.hdr.size = sizeof(reply);

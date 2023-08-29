@@ -88,6 +88,12 @@ int dai_config_dma_channel(struct dai_data *dd, struct comp_dev *dev, const void
 					      dd->stream_id);
 		channel = AFE_HS_GET_CHAN(handshake);
 		break;
+	case SOF_DAI_IMX_MICFIL:
+		channel = dai_get_handshake(dd->dai, dai->direction,
+					      dd->stream_id);
+		comp_err(dev, "dma_get_channel() %x", channel);
+	
+		break;
 	default:
 		/* other types of DAIs not handled for now */
 		comp_err(dev, "dai_config_dma_channel(): Unknown dai type %d",
@@ -181,6 +187,9 @@ int ipc_dai_data_config(struct dai_data *dd, struct comp_dev *dev)
 		dev->ipc_config.frame_fmt = SOF_IPC_FRAME_S16_LE;
 		break;
 	case SOF_DAI_MEDIATEK_AFE:
+		break;
+	case SOF_DAI_IMX_MICFIL:
+		dd->config.burst_elems = dai_get_fifo_depth(dd->dai, dai->direction);
 		break;
 	default:
 		/* other types of DAIs not handled for now */

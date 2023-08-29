@@ -160,6 +160,7 @@ set(TPLGS
 	## i.MX8 (i.MX8QM and i.MX8QXP) topologies
 	"sof-imx8-nocodec\;sof-imx8-nocodec"
 	"sof-imx8-wm8960-cs42888\;sof-imx8-wm8960-cs42888"
+	"sof-imx8m-micfil\;sof-imx8m-micfil"
 	"sof-imx8-cs42888\;sof-imx8-cs42888"
 	"sof-imx8-nocodec-sai\;sof-imx8-nocodec-sai"
 	"sof-imx8-wm8960-mixer\;sof-imx8-wm8960-mixer\;-DCODEC=wm8960\;-DRATE=48000\;-DSAI_INDEX=1"
