@@ -110,10 +110,32 @@ typedef int (*channel_copy_func)(const struct audio_stream *src, unsigned int sr
 				 struct audio_stream *dst, unsigned int dst_channel,
 				 unsigned int frames);
 
+struct dai_triangle_generator_state {
+	int32_t prev_pcm_value[SOF_IPC_MAX_CHANNELS];
+	int32_t pcm_increment[SOF_IPC_MAX_CHANNELS];
+	int32_t countdown;
+	bool first_copy;
+
+};
+
+struct dai_glitch_detect_state {
+	int32_t prev_pcm_value[SOF_IPC_MAX_CHANNELS];
+	int32_t glitch_count[SOF_IPC_MAX_CHANNELS];
+	int32_t zeros_count[SOF_IPC_MAX_CHANNELS];
+	int32_t ignore_count;
+	bool no_signal[SOF_IPC_MAX_CHANNELS];
+	bool first_value;
+	bool zeros_count_reported;
+};
+
 /**
  * \brief DAI runtime data
  */
 struct dai_data {
+#if CONFIG_ZEPHYR_SIMULATED_DAI_DRIVER
+	struct dai_triangle_generator_state triangle;
+	struct dai_glitch_detect_state glitch;
+#endif
 	/* local DMA config */
 	struct dma_chan_data *chan;
 	uint32_t stream_id;
