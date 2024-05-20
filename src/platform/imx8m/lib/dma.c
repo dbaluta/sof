@@ -37,6 +37,7 @@ static SHARED_DATA struct dma dma[PLATFORM_NUM_DMACS] = {
 		.irq		= SDMA3_IRQ,
 		.irq_name	= SDMA3_IRQ_NAME,
 	},
+	.z_dev = DEVICE_DT_GET(DT_NODELABEL(sdma3)),
 	.ops	= &sdma_ops,
 },
 };

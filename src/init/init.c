@@ -308,6 +308,8 @@ static int primary_core_init(int argc, char *argv[], struct sof *sof)
 	lp_sram_unpack();
 #endif
 
+	LOG_INF("About to start task_main");
+
 	/* should not return, except with Zephyr */
 	return task_main_start(sof);
 }

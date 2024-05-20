@@ -534,6 +534,8 @@ static int ipc_glb_stream_message(uint32_t header)
 {
 	uint32_t cmd = iCS(header);
 
+	LOG_INF("ipc_glb_stream_msg %x", cmd);
+
 	switch (cmd) {
 	case SOF_IPC_STREAM_PCM_PARAMS:
 		return ipc_stream_pcm_params(header);

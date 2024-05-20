@@ -192,6 +192,7 @@ int task_main_start(struct sof *sof)
 {
 	_smex_placeholder = smex_placeholder_f();
 
+	LOG_INF("task_main_start");
 	/* init default audio components */
 	sys_comp_init(sof);
 
@@ -203,6 +204,7 @@ int task_main_start(struct sof *sof)
 
 static int boot_complete(void)
 {
+	LOG_INF("OK... boot complete!");
 #ifdef CONFIG_IMX93_A55
 	/* in the case of i.MX93, SOF_IPC_FW_READY
 	 * sequence will be initiated by the host

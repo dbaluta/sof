@@ -4,7 +4,6 @@
 //
 // Author: Liam Girdwood <liam.r.girdwood@linux.intel.com>
 //         Keyon Jie <yang.jie@linux.intel.com>
-
 #include <sof/audio/buffer.h>
 #include <sof/audio/component_ext.h>
 #include <sof/audio/format.h>

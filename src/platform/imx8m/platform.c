@@ -146,7 +146,6 @@ int platform_boot_complete(uint32_t boot_message)
 	 * for SRC component.
 	 */
 	/* clock_set_freq(CLK_CPU, CLK_DEFAULT_CPU_HZ); */
-
 	return 0;
 }
 
