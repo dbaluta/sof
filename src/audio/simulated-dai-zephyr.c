@@ -50,11 +50,9 @@ static const struct comp_driver comp_dai;
 
 LOG_MODULE_REGISTER(dai_comp, CONFIG_SOF_LOG_LEVEL);
 
-/* c2b00d27-ffbc-4150-a51a-245c79c5e54b */
-DECLARE_SOF_RT_UUID("dai", dai_comp_uuid, 0xc2b00d27, 0xffbc, 0x4150,
-		    0xa5, 0x1a, 0x24, 0x5c, 0x79, 0xc5, 0xe5, 0x4b);
+SOF_DEFINE_REG_UUID(dai);
 
-DECLARE_TR_CTX(dai_comp_tr, SOF_UUID(dai_comp_uuid), LOG_LEVEL_INFO);
+DECLARE_TR_CTX(dai_comp_tr, SOF_UUID(dai_uuid), LOG_LEVEL_INFO);
 
 
 /*
@@ -650,14 +648,16 @@ dai_dma_multi_endpoint_cb(struct dai_data *dd, struct comp_dev *dev, uint32_t fr
 	for (i = 0; i < audio_stream_get_channels(&dd->dma_buffer->stream); i++) {
 		uint32_t multi_buf_channel = dd->dma_buffer->chmap[i];
 
+//FIXME
+#if 0
 		if (dev->direction == SOF_IPC_STREAM_PLAYBACK)
 			dd->process(&multi_endpoint_buffer->stream, multi_buf_channel,
 				    &dd->dma_buffer->stream, i, frames);
 		else
 			dd->process(&dd->dma_buffer->stream, i, &multi_endpoint_buffer->stream,
 				    multi_buf_channel, frames);
+#endif
 	}
-
 	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
 		audio_stream_writeback(&dd->dma_buffer->stream, bytes);
 		audio_stream_produce(&dd->dma_buffer->stream, bytes);
@@ -917,7 +917,7 @@ static int dai_set_dma_buffer(struct dai_data *dd, struct comp_dev *dev,
 		 */
 		hw_params.frame_fmt = dev->ipc_config.frame_fmt;
 		buffer_set_params(dd->dma_buffer, &hw_params, BUFFER_UPDATE_FORCE);
-		dd->sampling = get_sample_bytes(hw_params.frame_fmt);
+		//dd->sampling = get_sample_bytes(hw_params.frame_fmt);
 	}
 
 	dd->fast_mode = dd->ipc_config.feature_mask & BIT(IPC4_COPIER_FAST_MODE);
@@ -1335,7 +1335,7 @@ static void set_new_local_buffer(struct dai_data *dd, struct comp_dev *dev)
 /* copy and process stream data from source to sink buffers */
 int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_func *converter)
 {
-	uint32_t sampling = dd->sampling;
+	uint32_t sampling = 1; //FIXME dd->sampling;
 	uint32_t avail_bytes;
 	uint32_t free_bytes;
 	uint32_t copy_bytes;
@@ -1597,7 +1597,7 @@ int dai_zephyr_unbind(struct dai_data *dd, struct comp_dev *dev, void *data)
 
 static const struct comp_driver comp_dai = {
 	.type	= SOF_COMP_DAI,
-	.uid	= SOF_RT_UUID(dai_comp_uuid),
+	.uid	= SOF_RT_UUID(dai_uuid),
 	.tctx	= &dai_comp_tr,
 	.ops	= {
 		.create				= dai_new,
