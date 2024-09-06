@@ -14,6 +14,10 @@
 extern struct dma_ops dummy_dma_ops;
 extern struct dma_ops sdma_ops;
 
+#if !DT_NODE_EXISTS(DT_NODELABEL(sdma3))
+#error "whoops"
+#endif
+
 static SHARED_DATA struct dma dma[PLATFORM_NUM_DMACS] = {
 {
 	.plat_data = {
@@ -37,6 +41,7 @@ static SHARED_DATA struct dma dma[PLATFORM_NUM_DMACS] = {
 		.irq		= SDMA3_IRQ,
 		.irq_name	= SDMA3_IRQ_NAME,
 	},
+	.z_dev = DEVICE_DT_GET(DT_NODELABEL(sdma3)),
 	.ops	= &sdma_ops,
 },
 };

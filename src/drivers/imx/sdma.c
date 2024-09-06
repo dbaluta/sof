@@ -28,6 +28,10 @@ DECLARE_TR_CTX(sdma_tr, SOF_UUID(sdma_uuid), LOG_LEVEL_INFO);
 
 #define SDMA_BUFFER_PERIOD_COUNT 2
 
+int dma_nxp_sdma_start(const struct device *dev, uint32_t channel);
+void *dma_nxp_sdma_get_base(const struct device *dev);
+
+
 struct sdma_bd {
 	/* SDMA BD (buffer descriptor) configuration */
 	uint32_t config;
@@ -97,12 +101,22 @@ static void sdma_set_overrides(struct dma_chan_data *channel,
 
 static void sdma_enable_channel(struct dma *dma, int channel)
 {
-	dma_reg_write(dma, SDMA_HSTART, BIT(channel));
+
+	tr_info(&sdma_tr, "enable chanel channel %d %x", channel, (int)dma_nxp_sdma_get_base(dma->z_dev));
+
+	if (channel != 0) {
+		dma_nxp_sdma_start(dma->z_dev, channel);
+	}
+	else {
+		dma_nxp_sdma_channel_get(dma->z_dev, 0);
+		dma_nxp_sdma_start(dma->z_dev, 0);
+	}
 }
 
 static void sdma_disable_channel(struct dma *dma, int channel)
 {
-	dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
+	//dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
+	dma_nxp_sdma_stop(dma->z_dev, channel);
 }
 
 static int sdma_run_c0(struct dma *dma, uint8_t cmd, uint32_t buf_addr,
@@ -433,6 +447,9 @@ static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 
 		/* Allow events, allow manual */
 		sdma_set_overrides(channel, false, false);
+		dma_nxp_sdma_channel_get(dma->z_dev, i);
+		tr_info(&sdma_tr, "sdma_channel_get %d", i);
+	
 		return channel;
 	}
 	tr_err(&sdma_tr, "sdma no channel free");
@@ -869,7 +886,7 @@ static int sdma_set_config(struct dma_chan_data *channel,
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
 	int ret;
 
-	tr_dbg(&sdma_tr, "sdma_set_config channel %d", channel->index);
+	tr_info(&sdma_tr, "sdma_set_config channel %d", channel->index);
 
 	ret = sdma_read_config(channel, config);
 	if (ret < 0)
@@ -1002,7 +1019,7 @@ static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 const struct dma_ops sdma_ops = {
 	.channel_get	= sdma_channel_get,
 	.channel_put	= sdma_channel_put,
-	.start		= sdma_start,
+	.starut		= sdma_start,
 	.stop		= sdma_stop,
 	.pause		= sdma_pause,
 	.release	= sdma_release,
