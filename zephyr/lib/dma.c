@@ -139,6 +139,16 @@ SHARED_DATA struct dma dma[] = {
 	},
 	.z_dev = DEVICE_DT_GET(DT_NODELABEL(sdma3)),
 },
+{
+	.plat_data = {
+		.dir = DMA_DIR_HMEM_TO_LMEM | DMA_DIR_LMEM_TO_HMEM,
+		.devs = DMA_DEV_HOST,
+		.channels = 32,
+		.period_count = 2,
+	},
+	.z_dev = DEVICE_DT_GET(DT_NODELABEL(host_dma)),
+},
+
 };
 
 x

@@ -649,8 +649,10 @@ static int dai_set_sg_config(struct dai_data *dd, struct comp_dev *dev, uint32_t
 	config->is_scheduling_source = comp_is_scheduling_source(dev);
 	config->period = dev->pipeline->period;
 
-	comp_dbg(dev, "dai_set_sg_config(): dest_dev = %d stream_id = %d src_width = %d dest_width = %d",
+	comp_info(dev, "dai_set_sg_config(): dest_dev = %d stream_id = %d src_width = %d dest_width = %d",
 		 config->dest_dev, dd->stream_id, config->src_width, config->dest_width);
+	comp_info(dev, "dai_set_sg_config() period_bytes %d period_count %d elems %x",
+		  period_bytes, period_count, (int)config->elem_array.elems);
 
 	if (!config->elem_array.elems) {
 		fifo = dai_get_fifo(dd->dai, dev->direction, dd->stream_id);
@@ -709,7 +711,8 @@ static int dai_set_dma_config(struct dai_data *dd, struct comp_dev *dev)
 	struct dma_block_config *prev = NULL;
 	int i;
 
-	comp_dbg(dev, "dai_set_dma_config()");
+	comp_info(dev, "dai_set_dma_config() src_w %d dst_w %d array_count %d", config->src_width, 
+		  config->dest_width, config->elem_array.count);
 
 	dma_cfg = rballoc(SOF_MEM_FLAG_COHERENT, SOF_MEM_CAPS_RAM | SOF_MEM_CAPS_DMA,
 			  sizeof(struct dma_config));

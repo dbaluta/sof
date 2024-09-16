@@ -887,7 +887,14 @@ static int sdma_set_config(struct dma_chan_data *channel,
 	int ret;
 
 	tr_info(&sdma_tr, "sdma_set_config channel %d", channel->index);
-
+	tr_info(&sdma_tr, "sdma_set_config src_w %d dst_w %d burst_elems %d direction %d",
+		config->src_width, config->dest_width, config->burst_elems, config->direction);
+	tr_info(&sdma_tr, "sdma_set_config src_dev %d dest_dev %d cyclic %d period %d",
+		config->src_dev, config->dest_dev, config->cyclic, (int)config->period);
+	tr_info(&sdma_tr, "sdma_set_config elem array count %d src[0] %x dest[0] %x size[0] %d",
+		config->elem_array.count, config->elem_array.elems[0].src, config->elem_array.elems[0].dest, config->elem_array.elems[0].size);
+	tr_info(&sdma_tr, "Sdma_set_config scatter scatter %d irq_dis %d is_sched %d",
+		config->scatter, config->irq_disabled, config->is_scheduling_source);
 	ret = sdma_read_config(channel, config);
 	if (ret < 0)
 		return ret;
@@ -1019,7 +1026,7 @@ static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 const struct dma_ops sdma_ops = {
 	.channel_get	= sdma_channel_get,
 	.channel_put	= sdma_channel_put,
-	.starut		= sdma_start,
+	.start		= sdma_start,
 	.stop		= sdma_stop,
 	.pause		= sdma_pause,
 	.release	= sdma_release,
