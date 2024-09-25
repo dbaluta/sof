@@ -545,11 +545,16 @@ int dai_common_params(struct dai_data *dd, struct comp_dev *dev,
 	}
 
 	dd->period_bytes = period_bytes;
+	comp_info(dev, "dai_params(1) -> period_bytes %d frames %d period_count %d",
+		  period_bytes, dev->frames, period_count);
 
 	/* calculate DMA buffer size */
 	period_count = MAX(period_count,
 			   SOF_DIV_ROUND_UP(dd->ipc_config.dma_buffer_size, period_bytes));
 	buffer_size = ALIGN_UP(period_count * period_bytes, align);
+
+	comp_info(dev, "dai_params(2) -> period_count %d buffer_size %d",
+		  period_count, buffer_size);
 
 	/* alloc DMA buffer or change its size if exists */
 	if (dd->dma_buffer) {
@@ -588,7 +593,7 @@ static int dai_params(struct comp_dev *dev, struct sof_ipc_stream_params *params
 {
 	struct dai_data *dd = comp_get_drvdata(dev);
 
-	comp_dbg(dev, "dai_params()");
+	comp_info(dev, "========dai_params() ========== ");
 
 	return dai_common_params(dd, dev, params);
 }
@@ -930,6 +935,7 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 		return ret;
 	}
 
+
 	dma_fmt = audio_stream_get_frm_fmt(&dd->dma_buffer->stream);
 	sampling = get_sample_bytes(dma_fmt);
 
@@ -954,6 +960,9 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 	comp_dbg(dev, "dai_common_copy(), dir: %d copy_bytes= 0x%x, frames= %d",
 		 dev->direction, copy_bytes,
 		 samples / audio_stream_get_channels(&dd->local_buffer->stream));
+
+	comp_info(dev, "dai_common_copy() copy_bytes= %d free %d avail %d\n",
+		  copy_bytes, free_bytes, avail_bytes);
 
 	/* Check possibility of glitch occurrence */
 	if (dev->direction == SOF_IPC_STREAM_PLAYBACK &&

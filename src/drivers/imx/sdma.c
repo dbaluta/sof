@@ -18,11 +18,18 @@
 #include <stddef.h>
 #include <stdint.h>
 
+int dma_nxp_sdma_start(const struct device *dev, uint32_t channel);
+int dma_nxp_sdma_stop(const struct device *dev, uint32_t channel); 
+void dma_nxp_sdma_print_regs(const struct device *dev, const char *str);
+
 LOG_MODULE_REGISTER(sdma, CONFIG_SOF_LOG_LEVEL);
 
 SOF_DEFINE_REG_UUID(sdma);
 
 DECLARE_TR_CTX(sdma_tr, SOF_UUID(sdma_uuid), LOG_LEVEL_INFO);
+
+int dma_nxp_sdma_start(const struct device *dev, uint32_t channel);
+void *dma_nxp_sdma_get_base(const struct device *dev);
 
 #define SDMA_BUFFER_PERIOD_COUNT 2
 
@@ -96,12 +103,26 @@ static void sdma_set_overrides(struct dma_chan_data *channel,
 #ifdef USE_ZEPHYR
 static void sdma_enable_channel(struct dma *dma, int channel)
 {
-	dma_reg_write(dma, SDMA_HSTART, BIT(channel));
+
+	tr_info(&sdma_tr, "enable chan %d base %x", channel, (int)dma_nxp_sdma_get_base(dma->z_dev));
+	//dma_reg_write(dma, SDMA_HSTART, BIT(channel));
+#if 1
+	if (channel != 0) {
+		dma_nxp_sdma_start(dma->z_dev, channel);
+	}
+	else {
+
+		//dma_reg_write(dma, SDMA_HSTART, BIT(channel));
+		dma_nxp_sdma_channel_get(dma->z_dev, 0);
+		dma_nxp_sdma_start(dma->z_dev, 0);
+	}
+#endif
 }
 
 static void sdma_disable_channel(struct dma *dma, int channel)
 {
-	dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
+	//dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
+	dma_nxp_sdma_stop(dma->z_dev, channel);
 }
 
 #else
@@ -353,12 +374,13 @@ static int sdma_probe(struct dma *dma)
 		tr_err(&sdma_tr, "SDMA: probe: unable to allocate CCBs");
 		goto err;
 	}
-
+#if 0
 	ret = sdma_boot(dma);
 	if (ret < 0) {
 		tr_err(&sdma_tr, "SDMA: Unable to boot");
 		goto err;
 	}
+#endif
 
 #if CONFIG_HAVE_SDMA_FIRMWARE
 	ret = sdma_load_firmware(dma, (void *)sdma_code,
@@ -515,7 +537,7 @@ static int sdma_remove(struct dma *dma)
 	return 0;
 }
 
-#ifdef USE_SOF
+#ifdef USE_ZEPHYR
 static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 					      unsigned int chan)
 {
@@ -525,7 +547,7 @@ static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 	int i;
 	/* Ignoring channel 0; let's just allocate a free channel */
 
-	tr_dbg(&sdma_tr, "sdma_channel_get");
+	tr_info(&sdma_tr, "sdma_channel_get chan %d", chan);
 	for (i = 1; i < dma->plat_data.channels; i++) {
 		channel = &dma->chan[i];
 		if (channel->status != COMP_STATE_INIT)
@@ -544,6 +566,7 @@ static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 
 		/* Allow events, allow manual */
 		sdma_set_overrides(channel, false, false);
+		dma_nxp_sdma_channel_get(dma->z_dev, i);
 		return channel;
 	}
 	tr_err(&sdma_tr, "sdma no channel free");
@@ -1010,6 +1033,142 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 	return 0;
 }
 
+struct dma_config *
+dai_set_dma_config(struct dma_sg_config *config )
+{
+	struct dma_config *dma_cfg;
+	struct dma_block_config *dma_block_cfg;
+	struct dma_block_config *prev = NULL;
+	int i;
+	
+	tr_info(&sdma_tr, "dai_set_dma_config()");
+
+	dma_cfg = rballoc(SOF_MEM_FLAG_COHERENT, SOF_MEM_CAPS_RAM | SOF_MEM_CAPS_DMA,
+			  sizeof(struct dma_config));
+	if (!dma_cfg) {
+		tr_info(&sdma_tr,"dma_cfg allocation failed");
+		return -ENOMEM;
+	}
+
+	if (config->direction == DMA_DIR_MEM_TO_DEV)
+		dma_cfg->channel_direction = MEMORY_TO_PERIPHERAL;
+	else
+		dma_cfg->channel_direction = PERIPHERAL_TO_MEMORY;
+
+	dma_cfg->source_data_size = config->src_width;
+	dma_cfg->dest_data_size = config->dest_width;
+
+	if (config->burst_elems)
+		dma_cfg->source_burst_length = config->burst_elems;
+	else
+		dma_cfg->source_burst_length = 8;
+
+	dma_cfg->dest_burst_length = dma_cfg->source_burst_length;
+	dma_cfg->cyclic = config->cyclic;
+	dma_cfg->user_data = NULL;
+	dma_cfg->dma_callback = NULL;
+	dma_cfg->block_count = config->elem_array.count;
+	if (config->direction == DMA_DIR_MEM_TO_DEV)
+		dma_cfg->dma_slot = config->dest_dev;
+	else
+		dma_cfg->dma_slot = config->src_dev;
+
+	dma_block_cfg = rballoc(SOF_MEM_FLAG_COHERENT, SOF_MEM_CAPS_RAM | SOF_MEM_CAPS_DMA,
+				sizeof(struct dma_block_config) * dma_cfg->block_count);
+	if (!dma_block_cfg) {
+		rfree(dma_cfg);
+		tr_info(&sdma_tr, "dma_block_config allocation failed");
+		return NULL;//-ENOMEM;
+	}
+
+	dma_cfg->head_block = dma_block_cfg;
+	for (i = 0; i < dma_cfg->block_count; i++) {
+		dma_block_cfg->dest_scatter_en = config->scatter;
+		dma_block_cfg->block_size = config->elem_array.elems[i].size;
+
+
+		tr_info(&sdma_tr, "BLOCK = %d block_size = %d", i,
+			dma_block_cfg->block_size);
+
+		if (config->direction == DMA_DIR_MEM_TO_DEV) {
+			dma_block_cfg->source_address =
+				local_to_host(config->elem_array.elems[i].src);
+			dma_block_cfg->dest_address =
+				config->elem_array.elems[i].dest;
+			dma_block_cfg->source_addr_adj = DMA_ADDR_ADJ_DECREMENT;
+			dma_block_cfg->dest_addr_adj = DMA_ADDR_ADJ_INCREMENT;
+		} else {
+			dma_block_cfg->source_address =
+				config->elem_array.elems[i].src;
+			dma_block_cfg->dest_address =
+				local_to_host(config->elem_array.elems[i].dest);
+			dma_block_cfg->source_addr_adj = DMA_ADDR_ADJ_INCREMENT;
+			dma_block_cfg->dest_addr_adj = DMA_ADDR_ADJ_DECREMENT;
+		}
+
+		tr_info(&sdma_tr, "dir = %d src %x dst %x",
+			config->direction, dma_block_cfg->source_address,
+			dma_block_cfg->dest_address);
+		prev = dma_block_cfg;
+		prev->next_block = ++dma_block_cfg;
+	}
+	if (prev)
+		prev->next_block = dma_cfg->head_block;
+
+	return dma_cfg;
+}
+
+#ifdef USE_ZEPHYR
+static int sdma_set_config(struct dma_chan_data *channel,
+			   struct dma_sg_config *config)
+{
+	struct sdma_chan *pdata = dma_chan_get_data(channel);
+	int ret;
+	struct dma_config *dma_cfg;
+
+	tr_info(&sdma_tr, "sdma_set_config channel %d", channel->index);
+	
+	dma_cfg = dai_set_dma_config(config);
+	dma_nxp_sdma_config(channel->dma->z_dev,
+			    channel->index, dma_cfg);
+	
+	dma_nxp_sdma_print_regs(channel->dma->z_dev, "after configure");
+
+	channel->is_scheduling_source = config->is_scheduling_source;
+	channel->direction = config->direction;
+
+#if 0
+	ret = sdma_read_config(channel, config);
+	if (ret < 0)
+		return ret;
+
+	ret = sdma_prep_desc(channel, config);
+	if (ret < 0)
+		return ret;
+
+	/* allow events + allow manual start */
+	sdma_set_overrides(channel, false, false);
+
+	/* Upload context */
+	ret = sdma_upload_context(channel);
+	if (ret < 0) {
+		tr_err(&sdma_tr, "Unable to upload context, bailing");
+		return ret;
+	}
+
+	tr_dbg(&sdma_tr, "SDMA context uploaded");
+	/* Context uploaded, we can set up events now */
+	sdma_enable_event(channel, pdata->hw_event);
+
+	/* Finally set channel priority */
+	dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index), SDMA_DEFPRI);
+#endif
+
+	channel->status = COMP_STATE_PREPARE;
+
+	return 0;
+}
+#else
 static int sdma_set_config(struct dma_chan_data *channel,
 			   struct dma_sg_config *config)
 {
@@ -1050,48 +1209,7 @@ static int sdma_set_config(struct dma_chan_data *channel,
 
 	return 0;
 }
-
-
-static int sdma_set_config(struct dma_chan_data *channel,
-			   struct dma_sg_config *config)
-{
-	struct sdma_chan *pdata = dma_chan_get_data(channel);
-	int ret;
-
-	tr_dbg(&sdma_tr, "sdma_set_config channel %d", channel->index);
-
-	ret = sdma_read_config(channel, config);
-	if (ret < 0)
-		return ret;
-
-	channel->is_scheduling_source = config->is_scheduling_source;
-	channel->direction = config->direction;
-
-	ret = sdma_prep_desc(channel, config);
-	if (ret < 0)
-		return ret;
-
-	/* allow events + allow manual start */
-	sdma_set_overrides(channel, false, false);
-
-	/* Upload context */
-	ret = sdma_upload_context(channel);
-	if (ret < 0) {
-		tr_err(&sdma_tr, "Unable to upload context, bailing");
-		return ret;
-	}
-
-	tr_dbg(&sdma_tr, "SDMA context uploaded");
-	/* Context uploaded, we can set up events now */
-	sdma_enable_event(channel, pdata->hw_event);
-
-	/* Finally set channel priority */
-	dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index), SDMA_DEFPRI);
-
-	channel->status = COMP_STATE_PREPARE;
-
-	return 0;
-}
+#endif
 
 static int sdma_interrupt(struct dma_chan_data *channel, enum dma_irq_cmd cmd)
 {
