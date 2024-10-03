@@ -93,6 +93,7 @@ static void sdma_set_overrides(struct dma_chan_data *channel,
 			    host_override ? BIT(channel->index) : 0);
 }
 
+#ifdef USE_ZEPHYR
 static void sdma_enable_channel(struct dma *dma, int channel)
 {
 	dma_reg_write(dma, SDMA_HSTART, BIT(channel));
@@ -102,6 +103,19 @@ static void sdma_disable_channel(struct dma *dma, int channel)
 {
 	dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
 }
+
+#else
+
+static void sdma_enable_channel(struct dma *dma, int channel)
+{
+	dma_reg_write(dma, SDMA_HSTART, BIT(channel));
+}
+
+static void sdma_disable_channel(struct dma *dma, int channel)
+{
+	dma_reg_write(dma, SDMA_STOP_STAT, BIT(channel));
+}
+#endif
 
 static int sdma_run_c0(struct dma *dma, uint8_t cmd, uint32_t buf_addr,
 		       uint16_t sdma_addr, uint16_t count)
@@ -276,6 +290,7 @@ static int sdma_load_firmware(struct dma *dma, void *buf, int addr, int size)
 
 /* Below SOF related functions will be placed */
 
+#ifdef USE_ZEPHYR
 static int sdma_probe(struct dma *dma)
 {
 	int channel;
@@ -371,6 +386,103 @@ err:
 out:
 	return ret;
 }
+#else
+static int sdma_probe(struct dma *dma)
+{
+	int channel;
+	int ret;
+	struct sdma_pdata *pdata;
+
+	if (dma->chan) {
+		tr_err(&sdma_tr, "SDMA: Repeated probe");
+		return -EEXIST;
+	}
+
+	tr_info(&sdma_tr, "SDMA: probe");
+
+	dma->chan = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
+			    dma->plat_data.channels *
+			    sizeof(struct dma_chan_data));
+	if (!dma->chan) {
+		tr_err(&sdma_tr, "SDMA: Probe failure, unable to allocate channel descriptors");
+		return -ENOMEM;
+	}
+
+	pdata = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
+			sizeof(*pdata));
+	if (!pdata) {
+		rfree(dma->chan);
+		dma->chan = NULL;
+		tr_err(&sdma_tr, "SDMA: Probe failure, unable to allocate private data");
+		return -ENOMEM;
+	}
+	dma_set_drvdata(dma, pdata);
+
+	for (channel = 0; channel < dma->plat_data.channels; channel++) {
+		dma->chan[channel].index = channel;
+		dma->chan[channel].dma = dma;
+	}
+
+	pdata->chan_pdata = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
+				    dma->plat_data.channels *
+				    sizeof(struct sdma_chan));
+	if (!pdata->chan_pdata) {
+		ret = -ENOMEM;
+		tr_err(&sdma_tr, "SDMA: probe: out of memory");
+		goto err;
+	}
+
+	pdata->contexts = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
+				  dma->plat_data.channels *
+				  sizeof(struct sdma_context));
+	if (!pdata->contexts) {
+		ret = -ENOMEM;
+		tr_err(&sdma_tr, "SDMA: probe: unable to allocate contexts");
+		goto err;
+	}
+
+	pdata->ccb_array = rzalloc(SOF_MEM_ZONE_RUNTIME, 0, SOF_MEM_CAPS_RAM,
+				   dma->plat_data.channels *
+				   sizeof(struct sdma_ccb));
+	if (!pdata->ccb_array) {
+		ret = -ENOMEM;
+		tr_err(&sdma_tr, "SDMA: probe: unable to allocate CCBs");
+		goto err;
+	}
+
+	ret = sdma_boot(dma);
+	if (ret < 0) {
+		tr_err(&sdma_tr, "SDMA: Unable to boot");
+		goto err;
+	}
+
+#if CONFIG_HAVE_SDMA_FIRMWARE
+	ret = sdma_load_firmware(dma, (void *)sdma_code,
+				 RAM_CODE_START_ADDR,
+				 RAM_CODE_SIZE * sizeof(short));
+	if (ret < 0) {
+		tr_err(&sdma_tr, "SDMA: Failed to load firmware");
+		goto err;
+	}
+#endif
+
+	goto out;
+err:
+	if (pdata->chan_pdata)
+		rfree(pdata->chan_pdata);
+	if (pdata->contexts)
+		rfree(pdata->contexts);
+	if (pdata->ccb_array)
+		rfree(pdata->ccb_array);
+	/* Failures of allocation were treated already */
+	rfree(dma_get_drvdata(dma));
+	rfree(dma->chan);
+	dma_set_drvdata(dma, NULL);
+	dma->chan = NULL;
+out:
+	return ret;
+}
+#endif
 
 static int sdma_remove(struct dma *dma)
 {
@@ -403,6 +515,7 @@ static int sdma_remove(struct dma *dma)
 	return 0;
 }
 
+#ifdef USE_SOF
 static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 					      unsigned int chan)
 {
@@ -436,6 +549,42 @@ static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 	tr_err(&sdma_tr, "sdma no channel free");
 	return NULL;
 }
+
+#else
+static struct dma_chan_data *sdma_channel_get(struct dma *dma,
+					      unsigned int chan)
+{
+	struct sdma_pdata *pdata = dma_get_drvdata(dma);
+	struct dma_chan_data *channel;
+	struct sdma_chan *cdata;
+	int i;
+	/* Ignoring channel 0; let's just allocate a free channel */
+
+	tr_dbg(&sdma_tr, "sdma_channel_get");
+	for (i = 1; i < dma->plat_data.channels; i++) {
+		channel = &dma->chan[i];
+		if (channel->status != COMP_STATE_INIT)
+			continue;
+
+		/* Reset channel private data */
+		cdata = &pdata->chan_pdata[i];
+		memset(cdata, 0, sizeof(*cdata));
+		cdata->ctx = pdata->contexts + i;
+		cdata->ccb = pdata->ccb_array + i;
+		cdata->hw_event = -1;
+
+		channel->status = COMP_STATE_READY;
+		channel->index = i;
+		dma_chan_set_data(channel, cdata);
+
+		/* Allow events, allow manual */
+		sdma_set_overrides(channel, false, false);
+		return channel;
+	}
+	tr_err(&sdma_tr, "sdma no channel free");
+	return NULL;
+}
+#endif
 
 static void sdma_enable_event(struct dma_chan_data *channel, int eventnum)
 {
@@ -860,6 +1009,48 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 
 	return 0;
 }
+
+static int sdma_set_config(struct dma_chan_data *channel,
+			   struct dma_sg_config *config)
+{
+	struct sdma_chan *pdata = dma_chan_get_data(channel);
+	int ret;
+
+	tr_dbg(&sdma_tr, "sdma_set_config channel %d", channel->index);
+
+	ret = sdma_read_config(channel, config);
+	if (ret < 0)
+		return ret;
+
+	channel->is_scheduling_source = config->is_scheduling_source;
+	channel->direction = config->direction;
+
+	ret = sdma_prep_desc(channel, config);
+	if (ret < 0)
+		return ret;
+
+	/* allow events + allow manual start */
+	sdma_set_overrides(channel, false, false);
+
+	/* Upload context */
+	ret = sdma_upload_context(channel);
+	if (ret < 0) {
+		tr_err(&sdma_tr, "Unable to upload context, bailing");
+		return ret;
+	}
+
+	tr_dbg(&sdma_tr, "SDMA context uploaded");
+	/* Context uploaded, we can set up events now */
+	sdma_enable_event(channel, pdata->hw_event);
+
+	/* Finally set channel priority */
+	dma_reg_write(channel->dma, SDMA_CHNPRI(channel->index), SDMA_DEFPRI);
+
+	channel->status = COMP_STATE_PREPARE;
+
+	return 0;
+}
+
 
 static int sdma_set_config(struct dma_chan_data *channel,
 			   struct dma_sg_config *config)
