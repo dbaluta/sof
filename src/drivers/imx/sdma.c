@@ -18,9 +18,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define USE_ZEPHYR 1
+
 int dma_nxp_sdma_start(const struct device *dev, uint32_t channel);
 int dma_nxp_sdma_stop(const struct device *dev, uint32_t channel); 
 void dma_nxp_sdma_print_regs(const struct device *dev, const char *str);
+void dma_nxp_sdma_dump_info(const struct device *dev, const char *str);
 
 LOG_MODULE_REGISTER(sdma, CONFIG_SOF_LOG_LEVEL);
 
@@ -30,6 +33,8 @@ DECLARE_TR_CTX(sdma_tr, SOF_UUID(sdma_uuid), LOG_LEVEL_INFO);
 
 int dma_nxp_sdma_start(const struct device *dev, uint32_t channel);
 void *dma_nxp_sdma_get_base(const struct device *dev);
+void dma_nxp_sdma_print_context(const struct device *dev, int chan,
+	void *ctx, const char *str);
 
 #define SDMA_BUFFER_PERIOD_COUNT 2
 
@@ -100,7 +105,7 @@ static void sdma_set_overrides(struct dma_chan_data *channel,
 			    host_override ? BIT(channel->index) : 0);
 }
 
-#ifdef USE_ZEPHYR
+#if USE_ZEPHYR
 static void sdma_enable_channel(struct dma *dma, int channel)
 {
 
@@ -115,6 +120,7 @@ static void sdma_enable_channel(struct dma *dma, int channel)
 		//dma_reg_write(dma, SDMA_HSTART, BIT(channel));
 		dma_nxp_sdma_channel_get(dma->z_dev, 0);
 		dma_nxp_sdma_start(dma->z_dev, 0);
+
 	}
 #endif
 }
@@ -311,11 +317,11 @@ static int sdma_load_firmware(struct dma *dma, void *buf, int addr, int size)
 
 /* Below SOF related functions will be placed */
 
-#ifdef USE_ZEPHYR
+#if USE_ZEPHYR
 static int sdma_probe(struct dma *dma)
 {
 	int channel;
-	int ret;
+	int ret = 0;
 	struct sdma_pdata *pdata;
 
 	if (dma->chan) {
@@ -382,7 +388,7 @@ static int sdma_probe(struct dma *dma)
 	}
 #endif
 
-#if CONFIG_HAVE_SDMA_FIRMWARE
+#if 0
 	ret = sdma_load_firmware(dma, (void *)sdma_code,
 				 RAM_CODE_START_ADDR,
 				 RAM_CODE_SIZE * sizeof(short));
@@ -537,7 +543,7 @@ static int sdma_remove(struct dma *dma)
 	return 0;
 }
 
-#ifdef USE_ZEPHYR
+#if USE_ZEPHYR
 static struct dma_chan_data *sdma_channel_get(struct dma *dma,
 					      unsigned int chan)
 {
@@ -613,7 +619,7 @@ static void sdma_enable_event(struct dma_chan_data *channel, int eventnum)
 {
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
 
-	tr_dbg(&sdma_tr, "sdma_enable_event(%d, %d)", channel->index, eventnum);
+	tr_info(&sdma_tr, "sdma_enable_event(%d, %d)", channel->index, eventnum);
 
 	if (eventnum < 0 || eventnum > SDMA_HWEVENTS_COUNT)
 		return; /* No change if request is invalid */
@@ -656,7 +662,9 @@ static void sdma_channel_put(struct dma_chan_data *channel)
 
 static int sdma_start(struct dma_chan_data *channel)
 {
-	tr_dbg(&sdma_tr, "sdma_start(%d)", channel->index);
+	tr_info(&sdma_tr, "sdma_start(%d)", channel->index);
+	void *ctx;
+	struct sdma_chan *pdata = dma_chan_get_data(channel);
 
 	if (channel->status != COMP_STATE_PREPARE &&
 	    channel->status != COMP_STATE_PAUSED)
@@ -665,7 +673,15 @@ static int sdma_start(struct dma_chan_data *channel)
 	channel->status = COMP_STATE_ACTIVE;
 
 	sdma_enable_channel(channel->dma, channel->index);
+	dma_nxp_sdma_print_regs(channel->dma->z_dev, "after START with Zephyr/SOF");
+	dma_nxp_sdma_dump_info(channel->dma->z_dev, "INFO with SOF/Zephyr");
 
+#if USE_ZEPHYR
+	ctx = NULL;
+#else
+	ctx = pdata->ctx;
+#endif
+	dma_nxp_sdma_print_context(channel->dma->z_dev, channel->index, ctx, "CONTEXT");
 	return 0;
 }
 
@@ -715,6 +731,35 @@ static int sdma_release(struct dma_chan_data *channel)
 	return 0;
 }
 
+
+
+int dma_nxp_sdma_reload(const struct device *dev, uint32_t channel, uint32_t src,
+uint32_t dst, size_t size);
+
+#if 0
+
+static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
+{
+	struct sdma_chan *pdata = dma_chan_get_data(channel);
+	struct dma_cb_data next = {
+		.channel = channel,
+		.elem.size = bytes,
+	};
+	int idx;
+
+	tr_info(&sdma_tr, "sdma_copy for chan %d", channel->index);
+
+	notifier_event(channel, NOTIFIER_ID_DMA_COPY,
+		       NOTIFIER_TARGET_CORE_LOCAL, &next, sizeof(next));
+
+
+	dma_nxp_sdma_reload(channel->dma->z_dev, channel->index, 0,
+			0, bytes);
+	return 0;
+}
+
+#else
+
 static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 {
 	struct sdma_chan *pdata = dma_chan_get_data(channel);
@@ -745,6 +790,7 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 
 	return 0;
 }
+#endif
 
 static int sdma_status(struct dma_chan_data *channel,
 		       struct dma_chan_status *status, uint8_t direction)
@@ -971,6 +1017,7 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 		bd->config |= SDMA_BD_WRAP;
 	bd->config &= ~SDMA_BD_CONT;
 
+
 	/* CCB must point to buffer descriptors array */
 	memset(pdata->ccb, 0, sizeof(*pdata->ccb));
 	pdata->ccb->base_bd_paddr = (uint32_t)pdata->desc;
@@ -990,6 +1037,7 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 		sdma_script_addr = SDMA_SCRIPT_SHP2MCU_OFF;
 		break;
 	case SDMA_CHAN_TYPE_SAI2MCU:
+
 		sdma_script_addr = SDMA_SCRIPT_SAI2MCU_OFF;
 		break;
 	default:
@@ -1008,6 +1056,10 @@ static int sdma_prep_desc(struct dma_chan_data *channel,
 	} else {
 		watermark = (config->burst_elems * width) / 8;
 	}
+
+
+	tr_info(&sdma_tr, "THIS is watermark burst %d width %d W %d",
+		config->burst_elems, width, watermark);
 
 	memset(pdata->ctx, 0, sizeof(*pdata->ctx));
 	pdata->ctx->pc = sdma_script_addr;
@@ -1118,7 +1170,7 @@ dai_set_dma_config(struct dma_sg_config *config )
 	return dma_cfg;
 }
 
-#ifdef USE_ZEPHYR
+#if USE_ZEPHYR
 static int sdma_set_config(struct dma_chan_data *channel,
 			   struct dma_sg_config *config)
 {
@@ -1129,13 +1181,15 @@ static int sdma_set_config(struct dma_chan_data *channel,
 	tr_info(&sdma_tr, "sdma_set_config channel %d", channel->index);
 	
 	dma_cfg = dai_set_dma_config(config);
-	dma_nxp_sdma_config(channel->dma->z_dev,
-			    channel->index, dma_cfg);
-	
-	dma_nxp_sdma_print_regs(channel->dma->z_dev, "after configure");
 
 	channel->is_scheduling_source = config->is_scheduling_source;
 	channel->direction = config->direction;
+
+
+	dma_nxp_sdma_config(channel->dma->z_dev,
+			    channel->index, dma_cfg);
+	
+	dma_nxp_sdma_print_regs(channel->dma->z_dev, "after configure with Zephyr");
 
 #if 0
 	ret = sdma_read_config(channel, config);
@@ -1207,6 +1261,8 @@ static int sdma_set_config(struct dma_chan_data *channel,
 
 	channel->status = COMP_STATE_PREPARE;
 
+	dma_nxp_sdma_print_regs(channel->dma->z_dev, "after configure with SOF");
+
 	return 0;
 }
 #endif
@@ -1263,6 +1319,52 @@ static int sdma_get_attribute(struct dma *dma, uint32_t type, uint32_t *value)
 	return 0;
 }
 
+#if USE_ZEPHYR
+static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
+			      uint32_t *free)
+{
+	/* Check buffer descriptors, those with "DONE" = 0 are for the
+	 * host, "DONE" = 1 are for SDMA. The host side are either
+	 * available or free.
+	 */
+	struct sdma_chan *pdata = dma_chan_get_data(channel);
+	uint32_t result_data = 0;
+	int i;
+
+	tr_info(&sdma_tr, "sdma_get_data_size(%d)", channel->index);
+	if (channel->index == 0) {
+		/* Channel 0 shouldn't have this called anyway */
+		tr_err(&sdma_tr, "Please do not call get_data_size on SDMA channel 0!");
+		*avail = *free = 0;
+		return -EINVAL;
+	}
+
+#if 0
+	dcache_invalidate_region(pdata->desc, sizeof(pdata->desc[0]) * SDMA_MAX_BDS);
+
+	for (i = 0; i < pdata->desc_count && i < SDMA_MAX_BDS; i++) {
+		if (pdata->desc[i].config & SDMA_BD_DONE)
+			continue; /* These belong to SDMA controller */
+		result_data += pdata->desc[i].config &
+			SDMA_BD_COUNT_MASK;
+	}
+
+	*avail = *free = 0;
+	switch (channel->direction) {
+	case DMA_DIR_MEM_TO_DEV:
+		*free = result_data;
+		break;
+	case DMA_DIR_DEV_TO_MEM:
+		*avail = result_data;
+		break;
+	default:
+		tr_err(&sdma_tr, "sdma_get_data_size channel invalid direction");
+		return -EINVAL;
+	}
+#endif
+	return 0;
+}
+#else
 static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 			      uint32_t *free)
 {
@@ -1305,6 +1407,7 @@ static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 	}
 	return 0;
 }
+#endif
 
 const struct dma_ops sdma_ops = {
 	.channel_get	= sdma_channel_get,

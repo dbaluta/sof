@@ -94,7 +94,7 @@ struct dma *dma_get(uint32_t dir, uint32_t cap, uint32_t dev, uint32_t flags)
 	}
 
 	/* return DMAC */
-	tr_dbg(&dma_tr, "dma_get(), dma-probe id = %d",
+	tr_info(&dma_tr, "dma_get(), dma-probe id = %d",
 	       dmin->plat_data.id);
 
 	/* Shared DMA controllers with multiple channels
@@ -142,12 +142,16 @@ static int dma_init(struct dma *dma)
 	struct dma_chan_data *chan;
 	int i;
 
+	tr_info(&dma_tr, "dma_init ... ID %d channels %d",
+		dma->plat_data.id,
+		dma->plat_data.channels);
+
 	/* allocate dma channels */
 	dma->chan = rzalloc(SOF_MEM_ZONE_RUNTIME_SHARED, 0, SOF_MEM_CAPS_RAM,
 			    sizeof(struct dma_chan_data) * dma->plat_data.channels);
 
 	if (!dma->chan) {
-		tr_err(&dma_tr, "dma_probe_sof(): dma %d allocaction of channels failed",
+		tr_info(&dma_tr, "dma_probe_sof(): dma %d allocaction of channels failed",
 		       dma->plat_data.id);
 		return -ENOMEM;
 	}
@@ -232,7 +236,7 @@ struct dma *dma_get(uint32_t dir, uint32_t cap, uint32_t dev, uint32_t flags)
 	}
 
 	/* return DMAC */
-	tr_dbg(&dma_tr, "dma_get(), dma-probe id = %d",
+	tr_info(&dma_tr, "dma_get(), dma-probe id = %d",
 	       dmin->plat_data.id);
 
 	/* Shared DMA controllers with multiple channels

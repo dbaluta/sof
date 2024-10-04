@@ -927,6 +927,7 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 	uint32_t sink_samples;
 	uint32_t samples;
 	int ret;
+	static int run_count = 0;
 
 	/* get data sizes from DMA */
 	ret = dma_get_data_size_legacy(dd->chan, &avail_bytes, &free_bytes);
@@ -961,9 +962,11 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 		 dev->direction, copy_bytes,
 		 samples / audio_stream_get_channels(&dd->local_buffer->stream));
 
+	if (run_count < 2) {
+		run_count++;
 	comp_info(dev, "dai_common_copy() copy_bytes= %d free %d avail %d\n",
 		  copy_bytes, free_bytes, avail_bytes);
-
+	}
 	/* Check possibility of glitch occurrence */
 	if (dev->direction == SOF_IPC_STREAM_PLAYBACK &&
 	    copy_bytes + avail_bytes < dd->period_bytes)
