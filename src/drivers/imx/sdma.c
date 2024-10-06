@@ -25,6 +25,7 @@ int dma_nxp_sdma_stop(const struct device *dev, uint32_t channel);
 void dma_nxp_sdma_print_regs(const struct device *dev, const char *str);
 void dma_nxp_sdma_dump_info(const struct device *dev, const char *str);
 
+int dma_nxp_sdma_get_status(const struct device *dev, uint32_t chan_id, struct dma_status *stat);
 LOG_MODULE_REGISTER(sdma, CONFIG_SOF_LOG_LEVEL);
 
 SOF_DEFINE_REG_UUID(sdma);
@@ -203,7 +204,7 @@ static int sdma_register_init(struct dma *dma)
 	int i;
 
 	tr_dbg(&sdma_tr, "sdma_register_init");
-	dma_reg_write(dma, SDMA_RESET, 1);
+	dmaereg_write(dma, SDMA_RESET, 1);
 	/* Wait for 10us */
 	ret = poll_for_register_delay(dma_base(dma) + SDMA_RESET, 1, 0, 1000);
 	if (ret < 0) {
@@ -736,7 +737,7 @@ static int sdma_release(struct dma_chan_data *channel)
 int dma_nxp_sdma_reload(const struct device *dev, uint32_t channel, uint32_t src,
 uint32_t dst, size_t size);
 
-#if 0
+#if USE_ZEPHYR
 
 static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 {
@@ -746,8 +747,8 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 		.elem.size = bytes,
 	};
 	int idx;
-
-	tr_info(&sdma_tr, "sdma_copy for chan %d", channel->index);
+	static int run_count = 0;
+	//tr_info(&sdma_tr, "sdma_copy for chan %d", channel->index);
 
 	notifier_event(channel, NOTIFIER_ID_DMA_COPY,
 		       NOTIFIER_TARGET_CORE_LOCAL, &next, sizeof(next));
@@ -755,6 +756,12 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 
 	dma_nxp_sdma_reload(channel->dma->z_dev, channel->index, 0,
 			0, bytes);
+
+	if (run_count < 1) {
+	dma_nxp_sdma_print_regs(channel->dma->z_dev, "REGS after RELOAD");
+	dma_nxp_sdma_dump_info(channel->dma->z_dev, "INFO after reload");
+	run_count++;
+	}
 	return 0;
 }
 
@@ -768,7 +775,7 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 		.elem.size = bytes,
 	};
 	int idx;
-
+	static int cnt = 0;
 	tr_dbg(&sdma_tr, "sdma_copy");
 
 	idx = (pdata->next_bd + 1) % 2;
@@ -786,6 +793,12 @@ static int sdma_copy(struct dma_chan_data *channel, int bytes, uint32_t flags)
 	notifier_event(channel, NOTIFIER_ID_DMA_COPY,
 		       NOTIFIER_TARGET_CORE_LOCAL, &next, sizeof(next));
 
+	if (cnt == 0) {
+		dma_nxp_sdma_print_regs(channel->dma->z_dev, "SOF REGS after RELOAD");
+		dma_nxp_sdma_dump_info(channel->dma->z_dev, "SOF INFO after reload");
+		cnt++;
+
+	}
 	sdma_enable_channel(channel->dma, channel->index);
 
 	return 0;
@@ -1246,7 +1259,7 @@ static int sdma_set_config(struct dma_chan_data *channel,
 	sdma_set_overrides(channel, false, false);
 
 	/* Upload context */
-	ret = sdma_upload_context(channel);
+	ret = sdma_epload_context(channel);
 	if (ret < 0) {
 		tr_err(&sdma_tr, "Unable to upload context, bailing");
 		return ret;
@@ -1323,6 +1336,7 @@ static int sdma_get_attribute(struct dma *dma, uint32_t type, uint32_t *value)
 static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 			      uint32_t *free)
 {
+	struct dma_status stat;
 	/* Check buffer descriptors, those with "DONE" = 0 are for the
 	 * host, "DONE" = 1 are for SDMA. The host side are either
 	 * available or free.
@@ -1338,6 +1352,10 @@ static int sdma_get_data_size(struct dma_chan_data *channel, uint32_t *avail,
 		*avail = *free = 0;
 		return -EINVAL;
 	}
+
+	dma_nxp_sdma_get_status(channel->dma->z_dev, channel->index, &stat);
+	*avail = stat.pending_length;
+	*free = stat.free;
 
 #if 0
 	dcache_invalidate_region(pdata->desc, sizeof(pdata->desc[0]) * SDMA_MAX_BDS);

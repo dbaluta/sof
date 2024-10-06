@@ -96,6 +96,7 @@ static void dai_dma_cb(void *arg, enum notify_id type, void *data)
 	struct dai_data *dd = comp_get_drvdata(dev);
 	uint32_t bytes = next->elem.size;
 	int ret;
+	static int run_count = 0;
 
 	comp_dbg(dev, "dai_dma_cb()");
 
@@ -120,6 +121,22 @@ static void dai_dma_cb(void *arg, enum notify_id type, void *data)
 		return;
 	}
 
+	if (run_count < 2 ) {
+	comp_info(dev, "dai_cb() --> DMA buf size %d avail %d free %d w_ptr %08x",
+		  audio_stream_get_size(&dd->dma_buffer->stream),
+
+		  audio_stream_get_avail(&dd->dma_buffer->stream),
+		  audio_stream_get_free(&dd->dma_buffer->stream),
+		  audio_stream_get_wptr(&dd->dma_buffer->stream));
+
+
+	comp_info(dev, "dai_cb() --> DMA buf size %d avail %d free %d",
+		  audio_stream_get_size(&dd->dma_buffer->stream),
+
+		  audio_stream_get_avail(&dd->local_buffer->stream),
+		  audio_stream_get_free(&dd->local_buffer->stream));
+	}
+
 	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
 		ret = dma_buffer_copy_to(dd->local_buffer, dd->dma_buffer,
 					 dd->process, bytes, DUMMY_CHMAP);
@@ -127,6 +144,18 @@ static void dai_dma_cb(void *arg, enum notify_id type, void *data)
 		ret = dma_buffer_copy_from(dd->dma_buffer, dd->local_buffer,
 					   dd->process, bytes, DUMMY_CHMAP);
 	}
+
+	if (run_count < 2) {
+	comp_info(dev, "dai_cb() AFTER COPY --> DMA buf size %d avail %d free %d w_ptr %08x",
+		  audio_stream_get_size(&dd->dma_buffer->stream),
+
+		  audio_stream_get_avail(&dd->dma_buffer->stream),
+		  audio_stream_get_free(&dd->dma_buffer->stream),
+		  audio_stream_get_wptr(&dd->dma_buffer->stream));
+
+
+	}
+	run_count++;
 
 	/* assert dma_buffer_copy succeed */
 	if (ret < 0) {
@@ -568,10 +597,20 @@ int dai_common_params(struct dai_data *dd, struct comp_dev *dev,
 	} else {
 		dd->dma_buffer = buffer_alloc(buffer_size, SOF_MEM_CAPS_DMA, 0,
 					      addr_align, false);
+
+		comp_info(dev, "HERE we allocate dma buffer ... size %d", buffer_size);
+
 		if (!dd->dma_buffer) {
 			comp_err(dev, "dai_params(): failed to alloc dma buffer");
 			return -ENOMEM;
 		}
+
+		buffer_zero(dd->dma_buffer);
+		audio_stream_produce(&dd->dma_buffer->stream, buffer_size/2);
+
+		comp_info(dev, "HERE ZERO buffer and produce free: %d avail %d",
+		  audio_stream_get_free(&dd->dma_buffer->stream),
+			   audio_stream_get_avail(&dd->dma_buffer->stream));
 
 		/*
 		 * dma_buffer should reffer to hardware dai parameters.
@@ -940,6 +979,15 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 	dma_fmt = audio_stream_get_frm_fmt(&dd->dma_buffer->stream);
 	sampling = get_sample_bytes(dma_fmt);
 
+
+
+	if (run_count < 2) {
+	comp_info(dev, "dai_common_copy() --> DMA buf size %d avail %d free %d",
+		  audio_stream_get_size(&dd->dma_buffer->stream),
+
+		  audio_stream_get_avail(&dd->dma_buffer->stream),
+		  audio_stream_get_free(&dd->dma_buffer->stream));
+	}
 	/* calculate minimum size to copy */
 	if (dev->direction == SOF_IPC_STREAM_PLAYBACK) {
 		src_samples = audio_stream_get_avail_samples(&dd->local_buffer->stream);
@@ -964,7 +1012,7 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 
 	if (run_count < 2) {
 		run_count++;
-	comp_info(dev, "dai_common_copy() copy_bytes= %d free %d avail %d\n",
+			comp_info(dev, "dai_common_copy() copy_bytes= %d free %d avail %d\n",
 		  copy_bytes, free_bytes, avail_bytes);
 	}
 	/* Check possibility of glitch occurrence */
