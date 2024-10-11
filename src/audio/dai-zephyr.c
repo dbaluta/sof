@@ -1700,7 +1700,7 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 
 	copy_bytes = frames * audio_stream_frame_bytes(&dd->dma_buffer->stream);
 
-	comp_dbg(dev, "dir: %d copy_bytes= 0x%x",
+	comp_info(dev, "dai_common_copy() dir: %d copy_bytes= 0x%x",
 		 dev->direction, copy_bytes);
 
 #if CONFIG_DAI_VERBOSE_GLITCH_WARNINGS
@@ -1730,7 +1730,10 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 	if (ret < 0)
 		comp_warn(dev, "dai trigger copy failed");
 
-	if (dai_dma_cb(dd, dev, copy_bytes, converter) == DMA_CB_STATUS_END)
+	ret = dai_dma_cb(dd, dev, copy_bytes, converter);
+	comp_info(dev, "dai_dm_cb returned = %d", ret);
+
+	if (ret == DMA_CB_STATUS_END)
 		dma_stop(dd->chan->dma->z_dev, dd->chan->index);
 
 	ret = dma_reload(dd->chan->dma->z_dev, dd->chan->index, 0, 0, copy_bytes);
