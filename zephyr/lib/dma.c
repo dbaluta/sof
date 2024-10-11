@@ -150,7 +150,7 @@ SHARED_DATA struct dma dma[] = {
 	.z_dev = DEVICE_DT_GET(DT_NODELABEL(host_dma)),
 },
 #endif
-#if 0
+#if 1
 {
        .plat_data = {
                .dir = DMA_DIR_MEM_TO_DEV | DMA_DIR_DEV_TO_MEM,

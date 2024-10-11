@@ -42,6 +42,9 @@ struct dma *dma_get(uint32_t dir, uint32_t cap, uint32_t dev, uint32_t flags)
 		return NULL;
 	}
 
+
+	tr_err(&dma_tr, "DMAC instlled ... %d", info->num_dmas);
+
 	/* find DMAC with free channels that matches request */
 	for (d = info->dma_array; d < info->dma_array + info->num_dmas;
 	     d++) {

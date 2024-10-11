@@ -1108,7 +1108,7 @@ int dai_common_config_prepare(struct dai_data *dd, struct comp_dev *dev)
 	}
 
 	channel = dai_config_dma_channel(dd, dev, dd->dai_spec_config);
-	comp_dbg(dev, "channel = %d", channel);
+	comp_info(dev, "channel = %d", channel);
 
 	/* do nothing for asking for channel free, for compatibility. */
 	if (channel == DMA_CHAN_INVALID) {
@@ -1127,7 +1127,7 @@ int dai_common_config_prepare(struct dai_data *dd, struct comp_dev *dev)
 	dd->chan = &dd->dma->chan[channel];
 	dd->chan->dev_data = dd;
 
-	comp_dbg(dev, "new configured dma channel index %d",
+	comp_info(dev, "new configured dma channel index %d",
 		 dd->chan->index);
 
 	return 0;

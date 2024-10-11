@@ -204,7 +204,7 @@ static int sdma_register_init(struct dma *dma)
 	int i;
 
 	tr_dbg(&sdma_tr, "sdma_register_init");
-	dmaereg_write(dma, SDMA_RESET, 1);
+	dma_reg_write(dma, SDMA_RESET, 1);
 	/* Wait for 10us */
 	ret = poll_for_register_delay(dma_base(dma) + SDMA_RESET, 1, 0, 1000);
 	if (ret < 0) {

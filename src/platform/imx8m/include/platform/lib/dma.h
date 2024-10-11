@@ -42,7 +42,7 @@
  * to an irqsteer child 66 % 64 = 1 and reminder 2. This means the
  * interrupt is mapped to irqsteer1 and has the index 2.
  */
-#define SDMA3_IRQ	2
+#define SDMA3_IRQ	5
 #define SDMA3_IRQ_NAME	"irqsteer1"
 
 #define SDMA_CORE_RATIO 1/* Enable ACR bit as it's needed for this platform */
