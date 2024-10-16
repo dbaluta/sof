@@ -307,6 +307,7 @@ if (CONFIG_SOC_MIMX8QM6_ADSP OR CONFIG_SOC_MIMX8QX6_ADSP)
 	)
 
 	# Platform sources
+
 	zephyr_library_sources(
 		${SOF_PLATFORM_PATH}/imx8/platform.c
 		${SOF_PLATFORM_PATH}/imx8/lib/clk.c
@@ -324,25 +325,28 @@ endif()
 
 if (CONFIG_SOC_MIMX8ML8_ADSP)
 	zephyr_library_sources(
-		${SOF_DRIVERS_PATH}/generic/dummy-dma.c
-		${SOF_DRIVERS_PATH}/imx/sdma.c
-		${SOF_DRIVERS_PATH}/imx/sai.c
+#		${SOF_DRIVERS_PATH}/generic/dummy-dma.c
+#		${SOF_DRIVERS_PATH}/imx/sdma.c
+#		${SOF_DRIVERS_PATH}/imx/sai.c
 		${SOF_DRIVERS_PATH}/imx/ipc.c
-		${SOF_DRIVERS_PATH}/imx/micfil.c
-		${SOF_DRIVERS_PATH}/imx/interrupt-irqsteer.c
+#		${SOF_DRIVERS_PATH}/imx/micfil.c
+#		${SOF_DRIVERS_PATH}/imx/interrupt-irqsteer.c
 	)
 
 	# Platform sources
 	zephyr_library_sources(
 		${SOF_PLATFORM_PATH}/imx8m/platform.c
 		${SOF_PLATFORM_PATH}/imx8m/lib/clk.c
-		${SOF_PLATFORM_PATH}/imx8m/lib/dai.c
-		${SOF_PLATFORM_PATH}/imx8m/lib/dma.c
+#		${SOF_PLATFORM_PATH}/imx8m/lib/dai.c
+#		${SOF_PLATFORM_PATH}/imx8m/lib/dma.c
+
 	)
 
 	# SOF core infrastructure - runs on top of Zephyr
 	zephyr_library_sources(
-		${SOF_SRC_PATH}/drivers/interrupt.c
+		#${SOF_SRC_PATH}/drivers/interrupt.c
+
+		lib/dma.c
 	)
 
 	zephyr_library_sources(${SOF_SRC_PATH}/schedule/zephyr_ll.c)
