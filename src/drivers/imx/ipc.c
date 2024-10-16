@@ -33,7 +33,7 @@
 
 LOG_MODULE_REGISTER(ipc_task, CONFIG_SOF_LOG_LEVEL);
 
-#ifndef CONFIG_IMX8M
+#ifndef CONFIG_IMX8M1
 /* thanks to the fact that ARM's GIC is supported
  * by Zephyr there's no need to clear interrupts
  * explicitly. This should already be done by Zephyr
