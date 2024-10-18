@@ -150,7 +150,7 @@ SHARED_DATA struct dma dma[] = {
 	.z_dev = DEVICE_DT_GET(DT_NODELABEL(host_dma)),
 },
 #endif
-#if 1
+#if defined(CONFIG_SOC_MIMX8ML8_ADSP)
 {
        .plat_data = {
                .dir = DMA_DIR_MEM_TO_DEV | DMA_DIR_DEV_TO_MEM,
@@ -169,7 +169,7 @@ SHARED_DATA struct dma dma[] = {
        },
        .z_dev = DEVICE_DT_GET(DT_NODELABEL(host_dma)),
 },
-#endif
+#endif /* CONFIG_SOC_MIMX8ML8_ADSP */
 #ifdef CONFIG_SOC_MIMX8UD7_ADSP
 {
 	.plat_data = {
