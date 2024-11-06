@@ -144,11 +144,20 @@ int dai_set_config(struct dai *dai, struct ipc_config_dai *common_config,
 	const void *cfg_params;
 	bool is_blob;
 
+	tr_info(dai_comp_tr, "dai_set_config()");
+
+
 	cfg.dai_index = common_config->dai_index;
 	is_blob = common_config->is_config_blob;
 	cfg.format = sof_cfg->format;
 	cfg.options = sof_cfg->flags;
 	cfg.rate = common_config->sampling_frequency;
+
+#if 1
+	tr_info(dai_comp_tr, "type: %d format %d rate %d idx %d ",
+		 common_config->type,
+		 cfg.format, cfg.rate, cfg.dai_index);
+#endif
 
 	switch (common_config->type) {
 	case SOF_DAI_INTEL_SSP:
@@ -180,6 +189,10 @@ int dai_set_config(struct dai *dai, struct ipc_config_dai *common_config,
 	case SOF_DAI_IMX_ESAI:
 		cfg.type = DAI_IMX_ESAI;
 		cfg_params = &sof_cfg->esai;
+		break;
+	case SOF_DAI_IMX_MICFIL:
+		cfg.type = DAI_IMX_MICFIL;
+		cfg_params = &sof_cfg->micfil;
 		break;
 	default:
 		return -EINVAL;

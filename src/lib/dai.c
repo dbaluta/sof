@@ -149,6 +149,11 @@ const struct device *zephyr_dev[] = {
 #if CONFIG_DAI_NXP_ESAI
 	DT_FOREACH_STATUS_OKAY(nxp_dai_esai, GET_DEVICE_LIST)
 #endif
+#if CONFIG_DAI_NXP_MICFIL
+	DT_FOREACH_STATUS_OKAY(nxp_dai_micfil, GET_DEVICE_LIST)
+#endif
+
+
 };
 
 const struct device *dai_get_device(uint32_t type, uint32_t index)
@@ -159,9 +164,16 @@ const struct device *dai_get_device(uint32_t type, uint32_t index)
 
 	dir = (type == SOF_DAI_INTEL_DMIC) ? DAI_DIR_RX : DAI_DIR_BOTH;
 
+
+	tr_err(&dai_tr, "dai_get: type %d index %d",
+	       type, index);
+	
 	for (i = 0; i < ARRAY_SIZE(zephyr_dev); i++) {
 		if (dai_config_get(zephyr_dev[i], &cfg, dir))
 			continue;
+		tr_err(&dai_tr, "dai_config_get() CFG %d IDX %d",
+		       cfg.type, cfg.dai_index);
+	
 		if (cfg.type == type && cfg.dai_index == index)
 			return zephyr_dev[i];
 	}

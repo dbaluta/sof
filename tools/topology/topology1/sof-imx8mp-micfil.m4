@@ -24,7 +24,7 @@ PIPELINE_PCM_ADD(sof/pipe-passthrough-capture.m4,
         48000, 48000, 48000)
 
 DAI_ADD(sof/pipe-dai-capture.m4, 1, MICFIL, 2, micfil-dmic-hifi,
-PIPELINE_SINK_1, 2, s32le, 2000, 0, 0, SCHEDULE_TIME_DOMAIN_DMA)
+PIPELINE_SINK_1, 2, s32le, 2000, 0, 0, SCHEDULE_TIME_DOMAIN_TIMER)
 
 dnl DAI_CONFIG(type, dai_index, link_id, name, acpdmic_config)
 DAI_CONFIG(MICFIL, 0, 0, micfil-dmic-hifi,
