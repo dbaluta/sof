@@ -43,6 +43,8 @@ int dai_config_dma_channel(struct dai_data *dd, struct comp_dev *dev, const void
 
 	assert(config);
 
+	comp_err(dev, "dma_channel type %d", config->type);
+
 	switch (config->type) {
 	case SOF_DAI_INTEL_SSP:
 		COMPILER_FALLTHROUGH;
@@ -73,6 +75,9 @@ int dai_config_dma_channel(struct dai_data *dd, struct comp_dev *dev, const void
 	case SOF_DAI_IMX_MICFIL:
 		channel = dai_get_handshake(dd->dai, dai->direction,
 					    dd->stream_id);
+
+		channel = channel & GENMASK(7, 0);
+		comp_err(dev, "This is channel %d", channel);
 		break;
 	case SOF_DAI_AMD_BT:
 		channel = dai_get_handshake(dd->dai, dai->direction,
@@ -300,6 +305,9 @@ int dai_config(struct dai_data *dd, struct comp_dev *dev, struct ipc_config_dai 
 {
 	const struct sof_ipc_dai_config *config = spec_config;
 	int ret;
+
+	comp_err(dev, "DAI_CONFIG() dai type = %d index = %d dd %p",
+		  config->type, config->dai_index, dd);
 
 	/* ignore if message not for this DAI id/type */
 	if (dd->ipc_config.dai_index != config->dai_index ||

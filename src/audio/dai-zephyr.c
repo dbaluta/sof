@@ -144,11 +144,20 @@ int dai_set_config(struct dai *dai, struct ipc_config_dai *common_config,
 	const void *cfg_params;
 	bool is_blob;
 
+	tr_info(dai_comp_tr, "dai_set_config()");
+
+
 	cfg.dai_index = common_config->dai_index;
 	is_blob = common_config->is_config_blob;
 	cfg.format = sof_cfg->format;
 	cfg.options = sof_cfg->flags;
 	cfg.rate = common_config->sampling_frequency;
+
+#if 1
+	tr_info(dai_comp_tr, "type: %d format %d rate %d idx %d ",
+		 common_config->type,
+		 cfg.format, cfg.rate, cfg.dai_index);
+#endif
 
 	switch (common_config->type) {
 	case SOF_DAI_INTEL_SSP:
@@ -180,6 +189,10 @@ int dai_set_config(struct dai *dai, struct ipc_config_dai *common_config,
 	case SOF_DAI_IMX_ESAI:
 		cfg.type = DAI_IMX_ESAI;
 		cfg_params = &sof_cfg->esai;
+		break;
+	case SOF_DAI_IMX_MICFIL:
+		cfg.type = DAI_IMX_MICFIL;
+		cfg_params = &sof_cfg->micfil;
 		break;
 	default:
 		return -EINVAL;
@@ -708,6 +721,7 @@ static int dai_get_dma_slot(struct dai_data *dd, struct comp_dev *dev, uint32_t 
 	switch (cfg.type) {
 	case DAI_IMX_SAI:
 	case DAI_IMX_ESAI:
+	case DAI_IMX_MICFIL:
 		*slot = (hs & GENMASK(15, 8)) >> 8;
 		break;
 	default:
@@ -765,7 +779,7 @@ static int dai_set_sg_config(struct dai_data *dd, struct comp_dev *dev, uint32_t
 	config->is_scheduling_source = comp_is_scheduling_source(dev);
 	config->period = dev->pipeline->period;
 
-	comp_dbg(dev, "dest_dev = %d stream_id = %d src_width = %d dest_width = %d",
+	comp_info(dev, "dest_dev = %d stream_id = %d src_width = %d dest_width = %d",
 		 config->dest_dev, dd->stream_id, config->src_width, config->dest_width);
 
 	if (!config->elem_array.elems) {
@@ -1041,6 +1055,11 @@ int dai_common_params(struct dai_data *dd, struct comp_dev *dev,
 	 */
 	memset(&hw_params, 0, sizeof(hw_params));
 	err = dai_common_get_hw_params(dd, dev, &hw_params, params.direction);
+
+	comp_err(dev, "dai_common_get_params RET = %d RATE %d chan %d",
+		 err, hw_params.rate, hw_params.channels);
+
+
 	if (err < 0) {
 		comp_err(dev, "dai_common_get_hw_params() failed: %d", err);
 		return err;
@@ -1058,11 +1077,17 @@ int dai_common_params(struct dai_data *dd, struct comp_dev *dev,
 		return -EINVAL;
 	}
 
+
+	comp_err(dev, "verify params rET = %d", err);
+
 	err = dai_set_dma_buffer(dd, dev, &params, &period_bytes, &period_count);
 	if (err < 0) {
 		comp_err(dev, "alloc dma buffer failed.");
 		goto out;
 	}
+
+
+	comp_err(dev, "verify set_dma_buf %d", err);
 
 	err = dai_set_sg_config(dd, dev, period_bytes, period_count);
 	if (err < 0) {
@@ -1070,9 +1095,13 @@ int dai_common_params(struct dai_data *dd, struct comp_dev *dev,
 		goto out;
 	}
 
+
+	comp_err(dev, "verify set sg_config %d", err);
 	err = dai_set_dma_config(dd, dev);
 	if (err < 0)
 		comp_err(dev, "set dma config failed.");
+
+	comp_err(dev, "set_dma_cfg  %d", err);
 out:
 	/*
 	 * Make sure to free all allocated items, all functions
@@ -1120,7 +1149,7 @@ int dai_common_config_prepare(struct dai_data *dd, struct comp_dev *dev)
 	}
 
 	channel = dai_config_dma_channel(dd, dev, dd->dai_spec_config);
-	comp_dbg(dev, "channel = %d", channel);
+	comp_err(dev, "channel = %d", channel);
 
 	/* do nothing for asking for channel free, for compatibility. */
 	if (channel == SOF_DMA_CHAN_INVALID) {
@@ -1139,7 +1168,7 @@ int dai_common_config_prepare(struct dai_data *dd, struct comp_dev *dev)
 	dd->chan = &dd->dma->chan[channel];
 	dd->chan->dev_data = dd;
 
-	comp_dbg(dev, "new configured dma channel index %d",
+	comp_info(dev, "new configured dma channel index %d",
 		 dd->chan->index);
 
 	return 0;
@@ -1868,11 +1897,14 @@ uint32_t dai_get_init_delay_ms(struct dai *dai)
 	k_spinlock_key_t key;
 	uint32_t init_delay;
 
+	LOG_INF("dai_get_init_delay ... ");
 	if (!dai)
 		return 0;
 
 	key = k_spin_lock(&dai->lock);
 	props = dai_get_properties(dai->dev, 0, 0);
+	LOG_INF("dai_get_init_delay ... %x", props);
+
 	init_delay = props->reg_init_delay;
 	k_spin_unlock(&dai->lock, key);
 
