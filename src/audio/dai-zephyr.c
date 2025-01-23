@@ -794,6 +794,8 @@ static int dai_set_sg_config(struct dai_data *dd, struct comp_dev *dev, uint32_t
 			goto out;
 		}
 
+		comp_info(dev, "set_sg_config() max_bl_count %d period count %d period_bytes %d", max_block_count, period_count, period_bytes);
+
 		if (!max_block_count) {
 			comp_err(dev, "invalid max-block-count of zero");
 			goto out;
@@ -815,6 +817,7 @@ static int dai_set_sg_config(struct dai_data *dd, struct comp_dev *dev, uint32_t
 			} while (--max_block_count > 0);
 		}
 
+		comp_info(dev, "set_final max_bl_count %d period count %d period_bytes %d", max_block_count, period_count, period_bytes);
 		err = dma_sg_alloc(&config->elem_array, SOF_MEM_ZONE_RUNTIME,
 				   config->direction,
 				   period_count,
@@ -959,6 +962,8 @@ static int dai_set_dma_buffer(struct dai_data *dd, struct comp_dev *dev,
 
 	/* calculate frame size */
 	frame_size = get_frame_bytes(dev->ipc_config.frame_fmt, params->channels);
+
+	comp_info(dev, "set_dma_buffer() frame_size %d frames %d", frame_size, dev->frames);
 
 	/* calculate period size */
 	period_bytes = dev->frames * frame_size;
@@ -1637,7 +1642,13 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 	uint32_t sink_frames = 0;
 	uint32_t frames = UINT32_MAX;
 	int ret;
+	
+	static int64_t timeref;
+	static int count = -1;
+	int64_t diff;
 
+	count++;
+	
 	/* get data sizes from DMA */
 	ret = dma_get_status(dd->chan->dma->z_dev, dd->chan->index, &stat);
 	switch (ret) {
@@ -1658,6 +1669,12 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 
 	avail_bytes = stat.pending_length;
 	free_bytes = stat.free;
+#if 0
+	diff = k_uptime_delta(&timeref);
+	if ((count % 100) == 0)
+	comp_info(dev, "dai_copy() avail %d free %d diff %d",
+		  avail_bytes, free_bytes, (int)diff);
+#endif
 
 	/* handle module runtime unbind */
 	if (!dd->local_buffer) {
@@ -1743,6 +1760,13 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 
 	comp_dbg(dev, "dir: %d copy_bytes= 0x%x",
 		 dev->direction, copy_bytes);
+
+#if 1
+	diff = k_uptime_delta(&timeref);
+	if ((count % 100) == 0)
+	comp_info(dev, "dai_copy() copy %d avail %d free %d  period %d diff %d", copy_bytes, 
+		  avail_bytes, free_bytes, dd->period_bytes, (int)diff);
+#endif
 
 #if CONFIG_DAI_VERBOSE_GLITCH_WARNINGS
 	/* Check possibility of glitch occurrence */
@@ -1903,7 +1927,7 @@ uint32_t dai_get_init_delay_ms(struct dai *dai)
 
 	key = k_spin_lock(&dai->lock);
 	props = dai_get_properties(dai->dev, 0, 0);
-	LOG_INF("dai_get_init_delay ... %x", props);
+	//LOG_INF("dai_get_init_delay ... %x", props);
 
 	init_delay = props->reg_init_delay;
 	k_spin_unlock(&dai->lock, key);
