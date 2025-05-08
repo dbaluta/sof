@@ -1018,6 +1018,13 @@ elseif(CONFIG_COMP_IGO_NR)
 	)
 endif()
 
+if(CONFIG_COMP_NXP_EAP)
+	zephyr_library_sources(${SOF_AUDIO_PATH}/nxp/eap.c)
+	zephyr_library_import(EAPLibrary
+		${sof_top_dir}/src/audio/nxp/EAP/EAP_Library/libEAP16_3_0_13_FP1_RT600.a)
+endif()
+
+
 if(CONFIG_COMP_RTNR STREQUAL "m")
 	add_subdirectory(${SOF_AUDIO_PATH}/rtnr/llext
 			 ${PROJECT_BINARY_DIR}/rtnr_llext)
