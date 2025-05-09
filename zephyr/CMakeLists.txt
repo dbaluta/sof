@@ -1020,10 +1020,13 @@ endif()
 
 if(CONFIG_COMP_NXP_EAP)
 	zephyr_library_sources(${SOF_AUDIO_PATH}/nxp/eap.c)
-	zephyr_library_import(EAPLibrary
-		${sof_top_dir}/src/audio/nxp/EAP/EAP_Library/libEAP16_3_0_13_FP1_RT600.a)
+	if (CONFIG_COMP_NXP_EAP_STUB)
+		zephyr_library_sources(${SOF_AUDIO_PATH}/nxp/eap_stub.c)
+	else()
+		zephyr_library_import(EAPLibrary
+			${sof_top_dir}/eap_sdk/EAP_Library/libEAP16_3_0_13_FP1_RT600.a)
+	endif()
 endif()
-
 
 if(CONFIG_COMP_RTNR STREQUAL "m")
 	add_subdirectory(${SOF_AUDIO_PATH}/rtnr/llext
