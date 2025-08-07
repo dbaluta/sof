@@ -145,6 +145,21 @@ static void zephyr_domain_timer_fn(struct k_timer *timer)
 	struct zephyr_domain *zephyr_domain = k_timer_user_data_get(timer);
 	int core;
 
+
+
+       static uint32_t crt = 0;
+       static uint32_t prev = 0;
+       static int count = 0;
+
+       crt = k_cycle_get_32();
+       if (/*count < 5*/ false) {
+              tr_info(&ll_tr, "diff: count %d %u\n", count,
+		      		k_cyc_to_us_floor32(crt - prev));
+       }
+
+       prev = crt;
+       count++;
+
 	/*
 	 * A race is possible when the Zephyr LL scheduling domain is being
 	 * unregistered while a timer IRQ is processed on a different core. Then

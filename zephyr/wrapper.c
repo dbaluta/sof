@@ -187,6 +187,8 @@ static int boot_complete(void)
 	 */
 	return 0;
 #else
+	LOG_INF("Sending back boot complete ...\n");
+
 	/* let host know DSP boot is complete */
 	return platform_boot_complete(0);
 #endif /* CONFIG_IMX93_A55 */
