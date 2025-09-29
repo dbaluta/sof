@@ -78,10 +78,10 @@ static int write_block(struct image *image, struct manifest_module *module,
 		return ret;
 	}
 
-	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8zx\t0x%8.8lx\t%s\t%s\n", block_idx++,
+	fprintf(stdout, "\t%d\t0x%8.8x\t0x%8.8zx\t0x%8.8lx\t%s\t%s TYPE %d\n", block_idx++,
 		section->load_address, section->size, ftell(image->out_fd),
 		block.type == SOF_FW_BLK_TYPE_IRAM ? "TEXT" : "DATA",
-		section->header->name);
+		section->header->name, block.type);
 
 	/* return padding size */
 	return padding;

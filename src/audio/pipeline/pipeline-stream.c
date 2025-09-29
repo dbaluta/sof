@@ -195,7 +195,7 @@ int pipeline_trigger(struct pipeline *p, struct comp_dev *host, int cmd)
 {
 	int ret;
 
-	pipe_info(p, "pipe trigger cmd %d", cmd);
+	//pipe_info(p, "pipe trigger cmd %d", cmd);
 
 	p->trigger.aborted = false;
 
@@ -410,7 +410,7 @@ int pipeline_trigger(struct pipeline *p, struct comp_dev *host, int cmd)
 	bool trigger_first = false;
 	uint32_t flags = 0;
 #endif
-	pipe_info(p, "pipe trigger cmd %d", cmd);
+	//pipe_info(p, "pipe trigger cmd %d", cmd);
 
 	p->trigger.aborted = false;
 

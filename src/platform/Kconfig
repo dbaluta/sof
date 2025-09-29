@@ -179,6 +179,15 @@ config IMX95
 	help
 	  Select if your target platform is imx95-compatible.
 
+config IMX8M_CM7
+	bool "Build for NXP i.MX8MP CM7 core"
+	select ZEPHYR_LOG
+	select BUILD_OUTPUT_BIN
+	select HOST_PTABLE
+	select IMX
+	help
+	  Select if your target platform is imx8mp-compatible with cm7 core.
+
 config RENOIR
 	bool "Build for Renoir"
 	select XT_INTERRUPT_LEVEL_5
