@@ -16,6 +16,7 @@
 #include <kernel/abi.h>
 #include <kernel/ext_manifest.h>
 #include <sof/drivers/mu.h>
+#include <zephyr/cache.h>
 
 static const struct sof_ipc_fw_ready ready = {
 	.hdr = {
@@ -77,6 +78,7 @@ int platform_boot_complete(uint32_t boot_message)
 	imx_mu_xcr_rmw(IMX_MU_VERSION, IMX_MU_GCR,
 		       IMX_MU_xCR_GIRn(IMX_MU_VERSION, 1), 0);
 
+	sys_cache_data_disable();
 	return 0;
 }
 
