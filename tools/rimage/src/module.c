@@ -345,6 +345,8 @@ void module_parse_sections(struct module *module, const struct memory_config *me
 		out_section->type = get_section_type(sect);
 		out_section->rom = section_is_rom(mem_cfg, sect);
 		out_section->detached = section_is_detached(mem_cfg, sect);
+		//FIXME
+		out_section->detached = 0;
 		out_section->address = sect->data.vaddr;
 		out_section->load_address = find_physical_address(&module->elf, sect->data.vaddr);
 
