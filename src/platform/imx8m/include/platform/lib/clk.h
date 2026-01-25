@@ -16,6 +16,8 @@ struct sof;
 
 #define CLK_CPU(x)	(x)
 
+#define CPU_LOWEST_FREQ_IDX 0
+
 #define CPU_DEFAULT_IDX		0
 
 #define CLK_DEFAULT_CPU_HZ	800000000

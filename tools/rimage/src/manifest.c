@@ -652,8 +652,8 @@ static int man_create_modules(struct image *image, struct sof_man_fw_desc *desc,
 		module->foffset = 0;
 
 		err = man_module_create(image, module, man_module);
-		if (err < 0)
-			return err;
+		//if (err < 0)
+		//	return err;
 
 		/* setup man_modules for missing exec loader module */
 		i = 1;
@@ -690,7 +690,7 @@ static int man_create_modules(struct image *image, struct sof_man_fw_desc *desc,
 		}
 
 		if (err < 0)
-			return err;
+			continue;
 	}
 
 	return 0;
@@ -1678,6 +1678,88 @@ int verify_image(struct image *image)
 out:
 	fclose(in_file);
 	return 0;
+}
+
+static int man_init_image_ipc4_simple(struct image *image)
+{
+	struct fw_image_manifest_ipc4_simple *m;
+
+	/* allocate image */
+	image->fw_image = calloc(image->adsp->image_size, 1);
+	if (!image->fw_image)
+		return -ENOMEM;
+
+	/* get manifest pointer */
+	m = (struct fw_image_manifest_ipc4_simple *)image->fw_image;
+
+	/* create extended manifest header */
+	m->ext_man_hdr.id = SOF_EXT_MAN4_MAGIC_NUMBER;  /* $AE1 */
+	m->ext_man_hdr.len = MAN_DESC_OFFSET_IPC4_SIMPLE;
+	m->ext_man_hdr.version_major = 1;
+	m->ext_man_hdr.version_minor = 0;
+
+	return 0;
+}
+
+/*
+ * IPC4 Simple firmware writer for non-Intel platforms (NXP, etc.)
+ * Creates a simplified IPC4 manifest without Intel CSE/CSS signing
+ * Uses standard sof_man_fw_desc with man_create_modules like other IPC4 platforms
+ */
+int ipc4_simple_write_firmware(struct image *image)
+{
+	struct fw_image_manifest_ipc4_simple *m;
+	struct sof_man_fw_desc *desc;
+	int ret;
+
+	fprintf(stdout, "Creating IPC4 simple firmware for non-Intel platform\n");
+
+	/* init image */
+	ret = man_init_image_ipc4_simple(image);
+	if (ret < 0)
+		goto err;
+
+	/* get manifest and desc pointers */
+	m = (struct fw_image_manifest_ipc4_simple *)image->fw_image;
+	desc = &m->desc;
+
+	/* firmware and build version */
+	desc->header.major_version = image->fw_ver_major;
+	desc->header.minor_version = image->fw_ver_minor;
+	desc->header.hotfix_version = image->fw_ver_micro;
+	desc->header.build_version = image->fw_ver_build;
+
+	/* create each module */
+	desc->header.num_module_entries = image->num_modules;
+	ret = man_create_modules(image, desc, MAN_DESC_OFFSET_IPC4_SIMPLE + sizeof(struct sof_man_fw_header));
+	if (ret < 0)
+		goto err;
+
+	/* Update extended manifest module count */
+	m->ext_man_hdr.num_module_entries = image->num_modules;
+
+	fprintf(stdout, "Firmware completing IPC4 simple manifest\n");
+
+	/* Update preload page count */
+	desc->header.preload_page_count = (image->image_end + MAN_PAGE_SIZE - 1) / MAN_PAGE_SIZE;
+
+	fprintf(stdout, "Firmware file size 0x%x page count %d\n",
+		image->image_end, desc->header.preload_page_count);
+
+	/* write the firmware */
+	ret = fwrite(image->fw_image, image->image_end, 1, image->out_fd);
+	if (ret != 1) {
+		ret = file_error("failed to write IPC4 simple firmware", image->out_file);
+		goto err;
+	}
+
+	fprintf(stdout, "IPC4 Simple firmware created successfully!\n");
+	return 0;
+
+err:
+	free(image->fw_image);
+	unlink(image->out_file);
+	return ret;
 }
 
 

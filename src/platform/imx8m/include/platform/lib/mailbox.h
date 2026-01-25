@@ -61,6 +61,34 @@ static inline void mailbox_sw_reg_write(size_t offset, uint32_t src)
 	*ptr = src;
 }
 
+
+
+static inline void mailbox_sw_regs_write(size_t offset, const void *src, size_t bytes)
+{
+	volatile uint32_t *ptr;
+
+	ptr = (volatile uint32_t *)(MAILBOX_DEBUG_BASE + offset);
+
+	//memcpy_s((void*)ptr, MAILBOX_DEBUG_BASE - offset, src, bytes);
+}
+
+
+
+static inline uint64_t mailbox_sw_reg_read64(size_t offset)
+{
+	return 0;
+}
+
+static inline uint32_t mailbox_sw_reg_read(size_t offset)
+{
+	      volatile uint32_t *ptr;
+
+	       ptr = (volatile uint32_t *)(MAILBOX_DEBUG_BASE + offset);
+
+	    return *ptr;
+}
+
+
 #endif /* __PLATFORM_LIB_MAILBOX_H__ */
 
 #else

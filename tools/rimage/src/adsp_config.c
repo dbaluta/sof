@@ -2284,6 +2284,29 @@ static int parse_adsp_config_ace_v1_5(const toml_table_t *toml, struct image *im
 	return 0;
 }
 
+static int parse_adsp_config_v4_0(const toml_table_t *toml, struct image *image)
+{
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
+	struct parse_ctx ctx;
+	int ret;
+
+	/* version array has already been parsed, so increment ctx.array_cnt */
+	parse_ctx_init(&ctx);
+	++ctx.array_cnt;
+
+	/* Parse using regular ADSP parser */
+	ret = parse_adsp(toml, &ctx, out, verbose);
+	if (ret < 0)
+		return ret;
+
+	/* Set IPC4 simple firmware writer for non-Intel platforms */
+	out->write_firmware = ipc4_simple_write_firmware;
+	out->write_firmware_meu = NULL;
+
+	return 0;
+}
+
 struct config_parser {
 	int major;
 	int minor;
@@ -2299,6 +2322,7 @@ static const struct config_parser *find_config_parser(int64_t version[2])
 		{1, 8, parse_adsp_config_v1_8},
 		{2, 5, parse_adsp_config_v2_5},
 		{3, 0, parse_adsp_config_ace_v1_5},
+		{4, 0, parse_adsp_config_v4_0},  /* IPC4 simple for non-Intel platforms */
 	};
 	int i;
 

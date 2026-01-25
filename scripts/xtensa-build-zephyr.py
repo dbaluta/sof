@@ -215,7 +215,8 @@ platform_configs_all = {
 		"imx", "imx8mp_evk/mimx8ml8/adsp",
 		f"RI-2023.11{xtensa_tools_version_postfix}",
 		"hifi4_mscale_v2_0_2_prod",
-		RIMAGE_KEY = "key param ignored by imx8m"
+		RIMAGE_KEY = "key param ignored by imx8m",
+		ipc4 = True
 	),
 	"imx8ulp" : PlatformConfig(
 		"imx", "imx8ulp_evk/mimx8ud7/adsp",

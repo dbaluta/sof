@@ -35,6 +35,7 @@ struct timer;
 #define PLATFORM_SCHEDULE_IRQ		IRQ_NUM_SOFTWARE0
 #define PLATFORM_SCHEDULE_IRQ_NAME	NULL
 
+#define HW_CFG_VERSION         0
 /*
  * Platform stream capabilities
  * MAX_CHANNELS only affects 'components' so it is, for example,

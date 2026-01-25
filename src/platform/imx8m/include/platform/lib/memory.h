@@ -71,6 +71,9 @@
 #define EXT_MANIFEST_ELF_BASE	(LOG_ENTRY_ELF_BASE + LOG_ENTRY_ELF_SIZE)
 #define EXT_MANIFEST_ELF_SIZE	0x2000000
 
+#define HEAPMEM_SIZE 0x00010000
+
+
 /*
  * The Heap and Stack on i.MX8M are organised like this :-
  *

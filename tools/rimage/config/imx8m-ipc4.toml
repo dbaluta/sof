@@ -1,7 +1,4 @@
-# IMX8M IPC4 Configuration
-# No Intel-style signing (CSE/CSS) required for NXP platforms
-
-version = [4, 0]
+version = [4, 0]  # IPC4 simple format (no Intel CSS/CSE)
 
 [adsp]
 name = "imx8m-ipc4"
@@ -11,20 +8,20 @@ alias_mask = "0x0"
 [[adsp.mem_alias]]
 type = "cached"
 base = "0x0"
+
 [[adsp.mem_alias]]
 type = "uncached"
 base = "0x0"
 
-# IMX8MP memory layout
 [[adsp.mem_zone]]
 type = "IRAM"
-base = "0x3b6f8000"
+base = "0x3B6F8000"
 size = "0x800"
 host_offset = "0x10000"
 
 [[adsp.mem_zone]]
 type = "DRAM"
-base = "0x3b6e8000"
+base = "0x3B6E8000"
 size = "0x8000"
 host_offset = "0x0"
 
@@ -33,4 +30,3 @@ type = "SRAM"
 base = "0x92400000"
 size = "0x800000"
 host_offset = "0x0"
-

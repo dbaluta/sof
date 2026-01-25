@@ -13,7 +13,7 @@
 #include <rimage/cse.h>
 #include <rimage/plat_auth.h>
 #include <rimage/module.h>
-
+#include <rimage/ipc4.h>
 /*
  * Manifest module data
  */
@@ -225,8 +225,26 @@ struct fw_image_manifest_v1_5_sue {
     struct sof_man_fw_desc desc;
 } __attribute__((packed));
 
+
+
+
+/* Simple IPC4 manifest for non-Intel platforms (NXP, etc.)
+ * No CSE/CSS signing required - just extended manifest + standard firmware descriptor
+ */
+#define MAN_DESC_OFFSET_IPC4_SIMPLE	0x2000
+
+struct fw_image_manifest_ipc4_simple {
+	struct sof_ext_manifest4_hdr ext_man_hdr;	/* Extended manifest header */
+	uint8_t padding[MAN_DESC_OFFSET_IPC4_SIMPLE - sizeof(struct sof_ext_manifest4_hdr)];
+	struct sof_man_fw_desc desc;	/* Standard firmware descriptor at offset MAN_DESC_OFFSET_IPC4_SIMPLE */
+} __attribute__((packed));
+
+
+
 struct image;
 int simple_write_firmware(struct image *image);
+int ipc4_simple_write_firmware(struct image *image);
+
 int man_write_fw_v1_5(struct image *image);
 int man_write_fw_v1_5_sue(struct image *image);
 int man_write_fw_v1_8(struct image *image);
