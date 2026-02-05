@@ -69,8 +69,8 @@ static inline void stats_report(unsigned int runs, int core, unsigned int cycles
 	if (runs & BIT(CYCLES_WINDOW_SIZE))
 		return;
 #endif
-	tr_info(&ll_tr, "ll core %u timer avg %u, max %u, overruns %u",
-		core, cycles_sum, cycles_max, overruns);
+//	tr_info(&ll_tr, "ll core %u timer avg %u, max %u, overruns %u",
+//		core, cycles_sum, cycles_max, overruns);
 }
 #endif /* CONFIG_SCHEDULE_LL_STATS_LOG */
 

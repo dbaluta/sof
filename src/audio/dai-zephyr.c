@@ -262,8 +262,13 @@ dai_dma_cb(struct dai_data *dd, struct comp_dev *dev, uint32_t bytes,
 {
 	enum sof_dma_cb_status dma_status = SOF_DMA_CB_STATUS_RELOAD;
 	int ret;
+	static int current_number = 0;
+	static int count = -1;
+	count++;
 
-	comp_dbg(dev, "dai_dma_cb()");
+	if (count < 10)
+
+	comp_info(dev, "dai_dma_cb() cnt = %d bytes = %d", count, bytes);
 
 	/* stop dma copy for pause/stop/xrun */
 	if (dev->state != COMP_STATE_ACTIVE || dd->xrun) {
@@ -323,6 +328,49 @@ dai_dma_cb(struct dai_data *dd, struct comp_dev *dev, uint32_t bytes,
 			}
 		}
 #endif
+
+		int *p = (int*)audio_stream_get_rptr(&dd->local_buffer->stream);
+		static int found = 0;
+
+
+		for (int i = 0; i < bytes / (2 * 4) ; i+=2) {
+			if (p[i] != 0 && !found) {
+				LOG_INF("Found in depth first non zeri i = %d count = %d",
+					 i, count);
+				found = 1;
+			}
+		}
+	
+		if ((p[0] != 0) && !found) {
+			LOG_INF("Found first non zero at %d %08x\n", count, p[0]);
+			found = 1;
+		}
+
+
+		if ((p[0] == current_number) && (p[1] == current_number)) {
+			LOG_INF("Found marker at count %d", count);
+		    for (int i = 0; i < bytes / (2 * 4) ; i+=2) {
+			    if ((p[i] == current_number) && (p[i+1] == current_number)) {
+				    current_number++;
+			    } else {
+				    LOG_INF("Lost sync at count %d expected %08x Got: %08x %08x", count, current_number,
+					    p[i], p[i+1]);
+			    }
+		}
+		   }
+#if 0
+		if (count % 100 < 10) {
+			int *p = (int*)audio_stream_get_rptr(&dd->local_buffer->stream);
+			LOG_INF("%08x %08x %08x %08x", p[0], p[1], p[2], p[3]);
+
+			LOG_INF("LOCAL FREE %d AVAIL %d, DMA FREE %d AVAIL %d bytes %d",
+				audio_stream_get_free(&dd->local_buffer->stream),
+				audio_stream_get_avail(&dd->local_buffer->stream),
+				audio_stream_get_free(&dd->dma_buffer->stream),
+				audio_stream_get_avail(&dd->dma_buffer->stream), bytes);
+		}
+#endif
+
 		ret = dma_buffer_copy_to(dd->local_buffer, dd->dma_buffer,
 					 dd->process, bytes, dd->chmap);
 	} else {
@@ -1674,9 +1722,16 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 	uint32_t sink_frames = 0;
 	uint32_t frames = UINT32_MAX;
 	int ret;
+	static int xcount = -1;
+	xcount++;
 
 	/* get data sizes from DMA */
 	ret = dai_get_status(dev, dd, &stat);
+
+	if (xcount < 6)
+		LOG_INF("ret = %d count %d Pending %d free %d", ret, xcount,
+			stat.pending_length, stat.free);
+
 	switch (ret) {
 	case 0:
 		break;
@@ -1790,7 +1845,8 @@ int dai_common_copy(struct dai_data *dd, struct comp_dev *dev, pcm_converter_fun
 
 	copy_bytes = frames * audio_stream_frame_bytes(&dd->dma_buffer->stream);
 
-	comp_dbg(dev, "dir: %d copy_bytes= 0x%x",
+	if (xcount < 10)
+	comp_info(dev, "dir: %d copy_bytes= 0x%x",
 		 dev->direction, copy_bytes);
 
 #if CONFIG_DAI_VERBOSE_GLITCH_WARNINGS

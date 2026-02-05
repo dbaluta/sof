@@ -51,7 +51,7 @@ elseif(CONFIG_MATH_FIR)
 endif()
 
 if(CONFIG_MATH_FFT)
-  add_subdirectory(fft)
+#  add_subdirectory(fft)
 endif()
 
 if(CONFIG_MATH_IIR STREQUAL "m" AND DEFINED CONFIG_LLEXT)
