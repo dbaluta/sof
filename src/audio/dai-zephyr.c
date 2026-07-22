@@ -1324,7 +1324,7 @@ static int dai_comp_trigger_internal(struct dai_data *dd, struct comp_dev *dev, 
 {
 	int ret = 0;
 
-	comp_dbg(dev, "command = %u", cmd);
+	comp_info(dev, "DBG: dai_comp_trigger_internal cmd=%d xrun=%d", cmd, dd->xrun);
 
 #ifdef CONFIG_IPC_MAJOR_3
 	if (dev->state == comp_get_requested_state(cmd))
@@ -1338,6 +1338,8 @@ static int dai_comp_trigger_internal(struct dai_data *dd, struct comp_dev *dev, 
 		/* only start the DAI if we are not XRUN handling */
 		if (dd->xrun == 0) {
 			ret = sof_dma_start(dd->dma, dd->chan_index);
+			comp_info(dev, "DBG: sof_dma_start chan_index=%d ret=%d",
+				  dd->chan_index, ret);
 			if (ret < 0)
 				return ret;
 

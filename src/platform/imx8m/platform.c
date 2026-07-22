@@ -7,7 +7,9 @@
 #include <sof/compiler_info.h>
 #include <sof/debug/debug.h>
 #include <rtos/interrupt.h>
+#include <sof/ipc/common.h>
 #include <sof/ipc/driver.h>
+#include <sof/ipc/msg.h>
 #include <sof/drivers/mu.h>
 #include <rtos/timer.h>
 #include <sof/fw-ready-metadata.h>
@@ -36,6 +38,12 @@
 
 struct sof;
 
+#if CONFIG_IPC_MAJOR_4
+/* for the FW_READY trace via the shared ipc_tr context */
+LOG_MODULE_DECLARE(ipc, CONFIG_SOF_LOG_LEVEL);
+#endif
+
+#if !CONFIG_IPC_MAJOR_4
 static const struct sof_ipc_fw_ready ready
 	__section(".fw_ready") = {
 	.hdr = {
@@ -126,9 +134,95 @@ const struct ext_man_windows xsram_window
 		},
 	},
 };
+#endif /* !CONFIG_IPC_MAJOR_4 */
+
+#if CONFIG_IPC_MAJOR_4
+#include <rimage/sof/user/manifest.h>
+
+/*
+ * IPC4 module manifest entries, consumed by rimage's i.MX ext-manifest v4
+ * generator (ext_man_write_imx_ipc4()) from the ".module" ELF section and
+ * re-emitted as the module table in the "$AE1" extended manifest that the
+ * Linux IPC4 loader parses.
+ *
+ * Entry order defines the IPC4 module IDs the host will use: the generator
+ * assigns id = table index, so BASEFW must stay the first entry. The UUIDs
+ * must match uuid-registry.txt (and therefore the topology widgets).
+ */
+#define IMX_MAN_MODULE(mname, uuid_a, uuid_b, uuid_c, uuid_d...)	\
+	{								\
+		.module = {						\
+			.name = mname,					\
+			.uuid = {					\
+				.a = uuid_a,				\
+				.b = uuid_b,				\
+				.c = uuid_c,				\
+				.d = { uuid_d },			\
+			},						\
+			.type = {					\
+				.load_type = SOF_MAN_MOD_TYPE_BUILTIN,	\
+				.domain_ll = 1,				\
+			},						\
+			.affinity_mask = 1,				\
+			.instance_max_count = 8,			\
+		},							\
+	}
+
+static const struct sof_man_module_manifest imx8m_man_modules[]
+	__section(".module") __used = {
+	IMX_MAN_MODULE("BASEFW", 0x0e398c32, 0x5ade, 0xba4b,
+		       0x93, 0xb1, 0xc5, 0x04, 0x32, 0x28, 0x0e, 0xe4),
+	IMX_MAN_MODULE("COPIER", 0x9ba00c83, 0xca12, 0x4a83,
+		       0x94, 0x3c, 0x1f, 0xa2, 0xe8, 0x2f, 0x9d, 0xda),
+	IMX_MAN_MODULE("GAIN", 0x61bca9a8, 0x18d0, 0x4a18,
+		       0x8e, 0x7b, 0x26, 0x39, 0x21, 0x98, 0x04, 0xb7),
+	IMX_MAN_MODULE("MIXIN", 0x39656eb2, 0x3b71, 0x4049,
+		       0x8d, 0x3f, 0xf9, 0x2c, 0xd5, 0xc4, 0x3c, 0x09),
+	IMX_MAN_MODULE("MIXOUT", 0x3c56505a, 0x24d7, 0x418f,
+		       0xbd, 0xdc, 0xc1, 0xf5, 0xa3, 0xac, 0x2a, 0xe0),
+};
+
+/*
+ * Resolve an IPC4 module ID to its manifest entry. Module IDs are the entry
+ * indices of the table above (the same order the host sees in the "$AE1"
+ * extended manifest), so this is the i.MX substitute for Intel's IMR-resident
+ * rimage manifest used by ipc4_get_comp_drv().
+ */
+const struct sof_man_module *platform_ipc4_get_module(uint32_t module_id)
+{
+	if (module_id >= ARRAY_SIZE(imx8m_man_modules))
+		return NULL;
+
+	return &imx8m_man_modules[module_id].module;
+}
+#endif /* CONFIG_IPC_MAJOR_4 */
 
 int platform_boot_complete(uint32_t boot_message)
 {
+#if CONFIG_IPC_MAJOR_4
+	struct ipc_cmd_hdr header;
+
+	/*
+	 * IPC4: notify the host that the firmware is ready by sending the
+	 * SOF_IPC4_FW_READY notification header through the regular IPC send
+	 * path (which writes the header to the reserved dspbox header slot and
+	 * rings the MU doorbell). No fw_ready payload struct is used.
+	 */
+	ipc_boot_complete_msg(&header, 0);
+	header.pri |= boot_message;
+
+	tr_info(&ipc_tr, "ipc4: FW_READY -> pri 0x%08x ext 0x%08x",
+		header.pri, header.ext);
+
+	struct ipc_msg msg = {
+		.header = header.pri,
+		.extension = header.ext,
+		.tx_size = 0,
+		.tx_data = NULL,
+	};
+
+	return ipc_platform_send_msg(&msg);
+#else
 	mailbox_dspbox_write(0, &ready, sizeof(ready));
 
 	/* now interrupt host to tell it we are done booting */
@@ -141,11 +235,31 @@ int platform_boot_complete(uint32_t boot_message)
 	/* clock_set_freq(CLK_CPU, CLK_DEFAULT_CPU_HZ); */
 
 	return 0;
+#endif
 }
 
 int platform_init(struct sof *sof)
 {
 	int ret;
+
+	/*
+	 * i.MX has no dedicated IPC4 SW register block: MAILBOX_SW_REG_BASE
+	 * is carved out of DSP SRAM (see platform/lib/mailbox.h). On DSP
+	 * reload the host (remoteproc) only writes the firmware ELF's
+	 * loadable segments; this reserved SRAM window is not part of any
+	 * PT_LOAD segment and is not a .bss variable, so neither the loader
+	 * nor the C runtime zeroes it. Stale content therefore persists
+	 * across firmware reloads (a full SoC power cycle is required to
+	 * actually clear the SRAM). In particular, LLP reading slots left
+	 * non-zero by a previous boot that never cleanly freed its DAI
+	 * components accumulate and eventually exhaust the fixed-size
+	 * llp_gpdma_reading_slots[] table, making DAI creation fail with
+	 * "can't find free slot" even though nothing is actually in use.
+	 * Explicitly clear it on every boot to guarantee a known-good state.
+	 */
+	bzero((void *)MAILBOX_SW_REG_BASE, MAILBOX_SW_REG_SIZE);
+	dcache_writeback_region((__sparse_force void __sparse_cache *)MAILBOX_SW_REG_BASE,
+				 MAILBOX_SW_REG_SIZE);
 
 	platform_interrupt_init();
 	platform_clock_init(sof);

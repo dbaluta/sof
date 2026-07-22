@@ -87,7 +87,32 @@ int ipc_platform_compact_write_msg(struct ipc_cmd_hdr *hdr, int words)
 
 int ipc_platform_compact_read_msg(struct ipc_cmd_hdr *hdr, int words)
 {
+#if CONFIG_IPC_MAJOR_4
+	uint32_t *dst = (uint32_t *)hdr;
+
+	/*
+	 * IPC4 uses a compact 8-byte header (primary + extension) that the
+	 * generic handler expects to find in msg_data.msg_in. Unlike Intel
+	 * platforms, i.MX does not expose the header through dedicated HW
+	 * registers - the host writes it to the reserved header slot that
+	 * precedes the hostbox payload. Read those two words back here so that
+	 * ipc4_get_message_request() sees a valid request.
+	 */
+	if (words != 2)
+		return 0;
+
+	dcache_invalidate_region((__sparse_force void __sparse_cache *)MAILBOX_HOSTBOX_HDR_BASE,
+				 2 * sizeof(uint32_t));
+
+	dst[0] = ((volatile uint32_t *)MAILBOX_HOSTBOX_HDR_BASE)[0];
+	dst[1] = ((volatile uint32_t *)MAILBOX_HOSTBOX_HDR_BASE)[1];
+
+	tr_info(&ipc_tr, "ipc4: msg rx <- pri 0x%08x ext 0x%08x", dst[0], dst[1]);
+
+	return 2; /* number of words read */
+#else
 	return 0; /* number of words read - not currently used on this platform */
+#endif
 }
 
 enum task_state ipc_platform_do_cmd(struct ipc *ipc)
@@ -95,8 +120,21 @@ enum task_state ipc_platform_do_cmd(struct ipc *ipc)
 	struct ipc_cmd_hdr *hdr;
 	/* Use struct ipc_data *iipc = ipc_get_drvdata(ipc); if needed */
 
-	/* perform command */
+#if CONFIG_IPC_MAJOR_4
+	/*
+	 * IPC4: the compact header (primary + extension) is read into
+	 * msg_data.msg_in by ipc_compact_read_msg(), which falls back to
+	 * mailbox_validate() on i.MX (compact_read returns the header words).
+	 */
+	hdr = ipc_compact_read_msg();
+#else
+	/* IPC3: mailbox_validate() reads the full command header from the
+	 * hostbox.
+	 */
 	hdr = mailbox_validate();
+#endif
+
+	/* perform command */
 	ipc_cmd(hdr);
 
 	return SOF_TASK_STATE_COMPLETED;
@@ -153,8 +191,31 @@ int ipc_platform_send_msg(const struct ipc_msg *msg)
 	if (ipc->is_notification_pending || gir0_set || gir1_set)
 		return -EBUSY;
 
+#if CONFIG_IPC_MAJOR_4
+	/*
+	 * IPC4: write the compact header (primary + extension) to the reserved
+	 * header slot that precedes the dspbox payload, then write the optional
+	 * payload to the dspbox. The host reads the header from the slot to
+	 * identify the reply / notification and the payload from the dspbox.
+	 */
+	{
+		volatile uint32_t *hdr = (volatile uint32_t *)MAILBOX_DSPBOX_HDR_BASE;
+
+		hdr[0] = msg->header;
+		hdr[1] = msg->extension;
+		dcache_writeback_region((__sparse_force void __sparse_cache *)MAILBOX_DSPBOX_HDR_BASE,
+					2 * sizeof(uint32_t));
+
+		tr_info(&ipc_tr, "ipc4: msg tx -> pri 0x%08x ext 0x%08x size %d",
+			msg->header, msg->extension, msg->tx_size);
+
+		if (msg->tx_size)
+			mailbox_dspbox_write(0, msg->tx_data, msg->tx_size);
+	}
+#else
 	/* now send the message */
 	mailbox_dspbox_write(0, msg->tx_data, msg->tx_size);
+#endif
 
 	tr_dbg(&ipc_tr, "ipc: msg tx -> 0x%x", msg->header);
 

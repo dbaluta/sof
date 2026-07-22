@@ -34,4 +34,15 @@
 int ext_man_write(struct image *image);
 int ext_man_write_cavs_25(struct image *image);
 
+/*
+ * i.MX IPC4 extended manifest (v4) generator.
+ *
+ * Produces a minimal, unsigned SOF_EXT_MAN4 ($AE1) manifest describing the
+ * monolithic base firmware and its module(s), read from the ELF ".module"
+ * section. No CSS/CSE/signing is emitted - the resulting image is a plain
+ * [ext-manifest v4][Reef payload] blob suitable for the memcpy loader used by
+ * the i.MX SOF driver. This mirrors the simple IPC3 flow, adapted to IPC4.
+ */
+int ext_man_write_imx_ipc4(struct image *image);
+
 #endif /* __EXT_MAN_H__ */

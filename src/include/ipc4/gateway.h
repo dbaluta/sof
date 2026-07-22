@@ -143,6 +143,31 @@ union ipc4_gateway_attributes {
 	} bits; /**<< Bits */
 } __attribute__((packed, aligned(4)));
 
+/**
+ * struct sof_ipc4_gtw_attributes - i.MX host-copier config_data blob
+ * @lp_buffer_alloc: Gateway data requested in low power memory
+ * @alloc_from_reg_file: Gateway data requested in register file memory
+ * @rsvd: reserved for future use
+ * @phy_addr: physical address of the host PCM buffer (i.MX only, see
+ *            platform_params->use_phy_address in the kernel driver).
+ *            Zero on every other platform.
+ * @dma_buffer_size: size in bytes of the host PCM buffer at @phy_addr
+ *
+ * Must be kept in sync with the kernel's struct sof_ipc4_gtw_attributes
+ * (sound/soc/sof/ipc4-topology.h) - this is what the "default" (non-SSP/
+ * DMIC/ALH) gateway config_data actually contains on the wire. i.MX has no
+ * bus-mastering host DMA hardware like Intel HDA, so its software host-DMA
+ * proxy needs to be told directly where the host buffer lives physically;
+ * see copier_host_create() in copier_host.c.
+ */
+struct sof_ipc4_gtw_attributes {
+	uint32_t lp_buffer_alloc : 1;
+	uint32_t alloc_from_reg_file : 1;
+	uint32_t rsvd : 30;
+	uint32_t phy_addr;
+	uint32_t dma_buffer_size;
+} __attribute__((packed, aligned(4)));
+
 /**< Gateway configuration BLOB structure. */
 /*!
  * Actual config_blob content depends on the specific target gateway type.

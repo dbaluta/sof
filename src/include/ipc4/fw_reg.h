@@ -134,6 +134,13 @@ union ipc4_rom_info {
 /* Number of GPDMA LLP Reading slots in FW Regs. */
 #define IPC4_MAX_LLP_GPDMA_READING_SLOTS 24
 
+/*
+ * Number of host DMA byte counter slots in FW Regs (i.MX host position).
+ * Indexed by host gateway id (node_id.f.v_index == stream_tag - 1), which
+ * for a single duplex PCM on device 0 is 0 (playback) and 1 (capture).
+ */
+#define IPC4_MAX_HOST_BYTE_CNT_SLOTS 2
+
 /* Number of Aggregated SNDW Reading slots in FW Regs. */
 #define IPC4_MAX_LLP_SNDW_READING_SLOTS 16
 
@@ -167,7 +174,20 @@ struct ipc4_fw_registers {
 
 	uint8_t slave_core_sts[IPC4_MAX_SUPPORTED_ADSP_CORES];
 
-	uint32_t rsvd2[6];
+	uint32_t rsvd2[2];
+
+	/*
+	 * i.MX (IPC4): monotonic host DMA byte counter per host gateway,
+	 * published by the host copier on every transfer. i.MX has no
+	 * bus-mastering host DMA position register (unlike Intel HDA), so the
+	 * host driver derives the ALSA PCM pointer from this value - see the
+	 * .get_host_byte_counter op and sof_ipc4_pcm_pointer() in the kernel.
+	 * Indexed by host gateway id (node_id.f.v_index == stream_tag - 1).
+	 * Carved out of previously reserved space so pipeline_regs and all
+	 * following fields keep their offsets (ABI-compatible with platforms
+	 * that do not use it).
+	 */
+	uint64_t host_byte_cnt[IPC4_MAX_HOST_BYTE_CNT_SLOTS];
 
 	/* State of pipelines attached to host output gateways. */
 	struct ipc4_pipeline_registers pipeline_regs[IPC4_MAX_PIPELINE_REG_SLOTS];

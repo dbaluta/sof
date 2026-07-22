@@ -10,8 +10,13 @@
 #include <sof/trace/trace.h>
 #include <sof/audio/module_adapter/module/generic.h>
 #include <rtos/userspace_helper.h>
+#include <sof/lib/mailbox.h>
+#include <ipc4/gateway.h>
+#include <ipc4/fw_reg.h>
 #include "copier.h"
 #include "host_copier.h"
+
+#include <stddef.h>
 
 LOG_MODULE_DECLARE(copier, CONFIG_SOF_LOG_LEVEL);
 
@@ -192,6 +197,82 @@ __cold int copier_host_create(struct processing_module *mod,
 		comp_err(dev, "copier: host new failed with exit");
 		goto e_data;
 	}
+
+#if CONFIG_IMX8M
+	/*
+	 * i.MX has no bus-mastering host DMA hardware like Intel HDA, so
+	 * host_common_params()'s software host-DMA proxy needs to know the
+	 * host PCM buffer's physical address directly - conveyed here via
+	 * gtw_cfg.config_data (see sof_ipc4_prepare_copier_module() and
+	 * imx_pcm_hw_params() kernel-side). Without this,
+	 * hd->host.elem_array stays empty and create_local_elems()/
+	 * host_elements_reset() can only fill in the DSP-local side of the
+	 * transfer, leaving the host source/dest address at 0 (seen as
+	 * "got NULL source address" from the nxp_sof_host_dma driver).
+	 *
+	 * comp_set_attribute(dev, COMP_ATTR_HOST_BUFFER, ...) is the generic
+	 * way other code sets this, but dev->drv->ops.set_attribute here is
+	 * module_adapter_set_attribute() (the copier is a module-adapter
+	 * component under IPC4), which only understands
+	 * COMP_ATTR_IPC4_CONFIG and rejects everything else with -EINVAL.
+	 * host_set_attribute() in host-zephyr.c is for the old non-modular
+	 * "host" component driver and is never reached this way. hd is ours
+	 * directly here, so just assign into it.
+	 *
+	 * Must allocate with sof_heap_alloc(hd->alloc_ctx.heap, ...),
+	 * matching dma_sg_alloc() - host_common_free()/params teardown
+	 * frees hd->host.elem_array via dma_sg_free() on that same heap,
+	 * and freeing an allocation made through a different allocator
+	 * (e.g. mod_alloc_ext()) corrupts the heap.
+	 */
+	{
+		struct sof_ipc4_gtw_attributes *gtw_attr =
+			(struct sof_ipc4_gtw_attributes *)copier_cfg->gtw_cfg.config_data;
+
+		if (gtw_attr && gtw_attr->phy_addr) {
+			struct dma_sg_elem *host_elem;
+
+			host_elem = sof_heap_alloc(hd->alloc_ctx.heap, SOF_MEM_FLAG_USER,
+						  sizeof(*host_elem), 0);
+			if (!host_elem) {
+				ret = -ENOMEM;
+				goto e_conv;
+			}
+
+			host_elem->src = gtw_attr->phy_addr;
+			host_elem->dest = gtw_attr->phy_addr;
+			host_elem->size = gtw_attr->dma_buffer_size;
+
+			hd->host.elem_array.count = 1;
+			hd->host.elem_array.elems = host_elem;
+		}
+
+		/*
+		 * The normal copy path (host_get_copy_bytes_normal()) computes
+		 * available bytes from dma_stat.pending_length, which comes
+		 * from the DMA driver's .get_status(). The Zephyr
+		 * nxp_sof_host_dma driver's sof_host_dma_get_status() is a
+		 * stub ("nothing to be done here") that never populates
+		 * dma_stat, so avail_samples reads as 0 forever and no audio
+		 * ever copies ("no bytes to copy" indefinitely).
+		 *
+		 * IPC3 avoids this the same way for i.MX: under
+		 * CONFIG_HOST_PTABLE, ipc_stream_pcm_params() in
+		 * src/ipc/ipc3/handler.c sets COMP_ATTR_COPY_TYPE to
+		 * COMP_COPY_ONE_SHOT right alongside COMP_ATTR_HOST_BUFFER.
+		 * That selects host_copy_one_shot(), whose
+		 * host_get_copy_bytes_one_shot() instead derives the copy
+		 * size from the local sink buffer's own free space
+		 * (audio_stream_get_free_bytes()) - it never touches
+		 * dma_stat, so the stubbed-out get_status() doesn't matter.
+		 * As with COMP_ATTR_HOST_BUFFER above, comp_set_attribute()
+		 * can't reach host_set_attribute() through the copier's
+		 * module-adapter dispatch under IPC4, so set it directly.
+		 */
+		hd->copy_type = COMP_COPY_ONE_SHOT;
+	}
+#endif
+
 #if CONFIG_HOST_DMA_STREAM_SYNCHRONIZATION
 	/* Size of a configuration without optional parameters. */
 	const uint32_t basic_size = sizeof(*copier_cfg) +
@@ -289,6 +370,35 @@ void copier_host_dma_cb(struct comp_dev *dev, size_t bytes)
 
 	/* update position */
 	host_common_update(cd->hd, dev, bytes);
+
+	/*
+	 * Publish the monotonic host DMA byte counter to the FW registers
+	 * memory window so a non-HDA host driver (e.g. i.MX, which has no
+	 * bus-mastering host DMA position register) can derive the ALSA PCM
+	 * pointer - see sof_ipc4_pcm_pointer() and the .get_host_byte_counter
+	 * op. Indexed by host gateway id (node_id.f.v_index == stream_tag - 1).
+	 */
+	{
+		static uint32_t host_byte_cnt_dbg;	/* DEBUG only */
+		uint32_t gtw_id = cd->config.gtw_cfg.node_id.f.v_index;
+
+		if (gtw_id < IPC4_MAX_HOST_BYTE_CNT_SLOTS) {
+			uint32_t off = offsetof(struct ipc4_fw_registers, host_byte_cnt) +
+				       gtw_id * sizeof(uint64_t);
+
+			mailbox_sw_regs_write(off, &cd->hd->total_data_processed,
+					      sizeof(cd->hd->total_data_processed));
+
+			/* DEBUG: throttled ~every 200 transfers */
+			if ((host_byte_cnt_dbg++ % 200) == 0)
+				comp_info(dev,
+					  "DBG host_byte_cnt: dir=%d gtw_id=%u off=0x%x total=%u",
+					  dev->direction, gtw_id, off,
+					  (uint32_t)cd->hd->total_data_processed);
+		} else {
+			comp_warn(dev, "DBG host_byte_cnt: gtw_id=%u OUT OF RANGE", gtw_id);
+		}
+	}
 
 	/* callback for one shot copy */
 	if (cd->hd->copy_type == COMP_COPY_ONE_SHOT)

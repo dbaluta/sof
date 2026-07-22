@@ -23,6 +23,7 @@
 #include <ipc4/ssp.h>
 #include <ipc4/fw_reg.h>
 #include <ipc/dai.h>
+#include <ipc/dai-imx.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -84,6 +85,15 @@ int dai_config_dma_channel(struct dai_data *dd, struct comp_dev *dev, const void
 	int channel;
 
 	switch (dai->type) {
+	case SOF_DAI_IMX_SAI:
+		/*
+		 * i.MX's sdma_channel_get() ignores whatever channel number is
+		 * requested and always auto-picks a free one - the actual
+		 * per-DAI DMA request line comes from the SAI driver's own
+		 * plat_data fifo handshake config, not from here. Any value
+		 * other than SOF_DMA_CHAN_INVALID works.
+		 */
+		COMPILER_FALLTHROUGH;
 	case SOF_DAI_INTEL_SSP:
 		COMPILER_FALLTHROUGH;
 	case SOF_DAI_INTEL_DMIC:
@@ -184,6 +194,9 @@ int ipc_dai_data_config(struct dai_data *dd, struct comp_dev *dev)
 
 		break;
 	case SOF_DAI_INTEL_UAOL:
+		break;
+	case SOF_DAI_IMX_SAI:
+		/* no extra config needed, same as HDA/UAOL above */
 		break;
 	default:
 		/* other types of DAIs not handled for now */
@@ -405,6 +418,44 @@ __cold int dai_config(struct dai_data *dd, struct comp_dev *dev,
 	ret = dai_init_llp_info(dd, dev);
 	if (ret < 0)
 		return ret;
+
+#if CONFIG_IMX8M
+	/*
+	 * dai_set_config()'s SOF_DAI_IMX_SAI case reads spec_config as a
+	 * struct sof_ipc_dai_config with a populated .sai member (the IPC3
+	 * DAI_CONFIG wire shape) - but IPC4 has no mechanism to convey that
+	 * from topology, and copier_cfg->gtw_cfg.config_data here is our
+	 * generic i.MX gtw_attr blob, a completely different, much smaller
+	 * layout. Passing it through as-is means .sai's clock/TDM fields are
+	 * read out of unrelated/out-of-bounds memory, which is what was
+	 * causing a divide-by-zero in the SAI driver's BCLK computation.
+	 *
+	 * dd->dai_spec_config must stay untouched here: dai-zephyr.c reads
+	 * it elsewhere (get_dma_buffer_size()) as struct
+	 * ipc4_copier_module_cfg for ibs/obs, so repurposing it for the sai
+	 * config corrupts that. Build the sof_ipc_dai_config.sai separately
+	 * on the stack instead and pass it straight to dai_set_config(),
+	 * which only reads it for the duration of this call. Values match
+	 * the working IPC3 topology (see
+	 * tools/topology/topology1/sof-imx8mp-compr-wm8960.m4: SAI_CLOCK/
+	 * SAI_TDM(2, 32, 3, 3)) - the Zephyr SAI driver requires
+	 * bclk_rate == fsync_rate * tdm_slot_width * tdm_slots.
+	 */
+	if (common_config->type == SOF_DAI_IMX_SAI) {
+		struct sof_ipc_dai_config sai_cfg;
+
+		memset(&sai_cfg, 0, sizeof(sai_cfg));
+		sai_cfg.sai.mclk_rate = 12288000;
+		sai_cfg.sai.fsync_rate = common_config->sampling_frequency;
+		sai_cfg.sai.bclk_rate = sai_cfg.sai.fsync_rate * 32 * 2;
+		sai_cfg.sai.tdm_slots = 2;
+		sai_cfg.sai.tdm_slot_width = 32;
+		sai_cfg.sai.tx_slots = 3;
+		sai_cfg.sai.rx_slots = 3;
+
+		return dai_set_config(dd->dai, common_config, &sai_cfg, sizeof(sai_cfg));
+	}
+#endif
 
 	/* gtw_cfg.config_length is in words */
 	size = copier_cfg->gtw_cfg.config_length << 2;

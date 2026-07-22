@@ -548,6 +548,7 @@ config RIMAGE_SIGNING_SCHEMA
 	default "tgl" if TIGERLAKE
 	default "imx8" if IMX8
 	default "imx8x" if IMX8X
+	default "imx8m_ipc4" if IMX8M && IPC_MAJOR_4
 	default "imx8m" if IMX8M
 	default "imx8m_cm7" if IMX8M_CM7
 	default "imx8ulp" if IMX8ULP

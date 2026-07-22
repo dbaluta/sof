@@ -307,6 +307,31 @@ __cold int copier_dai_create(struct comp_dev *dev, struct copier_data *cd,
 		break;
 	case ipc4_i2s_link_output_class:
 	case ipc4_i2s_link_input_class:
+#if CONFIG_IMX8M
+		/*
+		 * i.MX has no SSP hardware and provides no SSP hw_config
+		 * blob in gtw_cfg_data (ipc4_find_dma_config() below would
+		 * fail), so map the shared I2S_LINK node classes to the SAI
+		 * DAI instead. ipc4_gtw_link (not ipc4_gtw_ssp) is used for
+		 * format conversion purposes - get_converter_func() already
+		 * treats both identically.
+		 *
+		 * IPC4 has no wire mechanism to convey DAI protocol/clock
+		 * format from topology (only IPC3's handler.c ever sets
+		 * ipc_config_dai::format); Intel's DAI types don't need it
+		 * here because their clocking comes from the SSP/HDA blob
+		 * instead. The wm8960 on this board is the bclk/fsync
+		 * provider (see imx8mp-evk-sof-cm7-wm8960.dts,
+		 * "bitclock-master; frame-master;"), matching the known-good
+		 * IPC3 topology's SAI_CONFIG(I2S, ..., codec_provider, ...).
+		 * Hardcoded here since there's currently no topology path to
+		 * make this configurable for IPC4.
+		 */
+		dai.type = SOF_DAI_IMX_SAI;
+		dai.format = SOF_DAI_FMT_I2S | SOF_DAI_FMT_CBP_CFP;
+		cd->gtw_type = ipc4_gtw_link;
+		break;
+#else
 		dai.type = SOF_DAI_INTEL_SSP;
 		dai.is_config_blob = true;
 		cd->gtw_type = ipc4_gtw_ssp;
@@ -316,6 +341,7 @@ __cold int copier_dai_create(struct comp_dev *dev, struct copier_data *cd,
 			return -EINVAL;
 		}
 		break;
+#endif
 	case ipc4_alh_link_output_class:
 	case ipc4_alh_link_input_class:
 #if ACE_VERSION > ACE_VERSION_1_5

@@ -373,7 +373,18 @@ __cold static int ipc4_module_process_dx(struct ipc4_message_request *ipc4)
 		arch_irq_lock();
 		platform_timer_stop(timer_get());
 #endif
+#if defined(CONFIG_PM)
+		/*
+		 * pm_prepare_D3 blocks ipc_send_queued_msg() until something
+		 * clears it again. That only happens from
+		 * ipc_device_resume_handler(), which requires CONFIG_PM_DEVICE
+		 * (itself gated on CONFIG_PM) to ever run. Without CONFIG_PM,
+		 * setting this here would wedge the IPC queue forever,
+		 * including the reply to this very message - see task_mask
+		 * above, which is guarded the same way.
+		 */
 		ipc_get()->pm_prepare_D3 = 1;
+#endif
 	}
 
 	return IPC4_SUCCESS;

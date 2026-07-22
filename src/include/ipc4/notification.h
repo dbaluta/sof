@@ -42,6 +42,14 @@ enum sof_ipc4_notification_type {
 	SOF_IPC4_PROBE_DATA_AVAILABLE		= 14,
 	SOF_IPC4_WATCHDOG_TIMEOUT		= 15,
 	SOF_IPC4_MANAGEMENT_SERVICE		= 16,
+	/*
+	 * Vendor (NXP i.MX): host period elapsed. i.MX has no host-side DMA
+	 * hardware to raise a period interrupt (unlike Intel HDA), so the host
+	 * copier notifies the driver once per host period to drive
+	 * snd_sof_pcm_period_elapsed(). The host gateway id (node_id.f.v_index)
+	 * is carried in the notification extension word.
+	 */
+	SOF_IPC4_IMX_HOST_PERIOD_ELAPSED	= 200,
 };
 
 /**

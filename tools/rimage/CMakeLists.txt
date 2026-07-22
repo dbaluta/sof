@@ -18,6 +18,7 @@ add_executable(rimage
 	src/pkcs1_5.c
 	src/manifest.c
 	src/ext_manifest.c
+	src/ext_manifest_imx.c
 	src/rimage.c
 	src/toml_utils.c
 	src/adsp_config.c

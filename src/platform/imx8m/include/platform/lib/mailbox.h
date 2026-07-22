@@ -37,6 +37,14 @@
 #define MAILBOX_HOSTBOX_BASE		SRAM_INBOX_BASE
 #define MAILBOX_HOSTBOX_OFFSET		SRAM_INBOX_OFFSET
 
+/*
+ * IPC4-only: bases of the 8-byte compact-header slots that precede each
+ * payload box. The DSP writes reply/notification headers to the dspbox header
+ * slot and reads command headers from the hostbox header slot.
+ */
+#define MAILBOX_DSPBOX_HDR_BASE		SRAM_OUTBOX_HDR_BASE
+#define MAILBOX_HOSTBOX_HDR_BASE	SRAM_INBOX_HDR_BASE
+
 #define MAILBOX_DEBUG_SIZE		SRAM_DEBUG_SIZE
 #define MAILBOX_DEBUG_BASE		SRAM_DEBUG_BASE
 #define MAILBOX_DEBUG_OFFSET		SRAM_DEBUG_OFFSET
@@ -59,6 +67,63 @@ static inline void mailbox_sw_reg_write(size_t offset, uint32_t src)
 
 	ptr = (volatile uint32_t *)(MAILBOX_DEBUG_BASE + offset);
 	*ptr = src;
+}
+
+/*
+ * IPC4 software registers. Used by the copier component to publish stream
+ * position information (LLP). i.MX has no dedicated SW register block, so a
+ * small region of the mailbox SRAM is reserved for this purpose.
+ */
+#define MAILBOX_SW_REG_BASE	SRAM_SW_REG_BASE
+#define MAILBOX_SW_REG_SIZE	SRAM_SW_REG_SIZE
+
+static inline void mailbox_sw_reg_write64(size_t offset, uint64_t src)
+{
+	volatile uint64_t *ptr;
+
+	ptr = (volatile uint64_t *)(MAILBOX_SW_REG_BASE + offset);
+	*ptr = src;
+	dcache_writeback_region((__sparse_force void __sparse_cache *)(MAILBOX_SW_REG_BASE +
+								       offset),
+				sizeof(src));
+}
+
+static inline uint32_t mailbox_sw_reg_read(size_t offset)
+{
+	volatile uint32_t *ptr;
+
+	ptr = (volatile uint32_t *)(MAILBOX_SW_REG_BASE + offset);
+	dcache_invalidate_region((__sparse_force void __sparse_cache *)(MAILBOX_SW_REG_BASE +
+								       offset),
+				 sizeof(uint32_t));
+
+	return *ptr;
+}
+
+static inline uint64_t mailbox_sw_reg_read64(size_t offset)
+{
+	volatile uint64_t *ptr;
+
+	ptr = (volatile uint64_t *)(MAILBOX_SW_REG_BASE + offset);
+	dcache_invalidate_region((__sparse_force void __sparse_cache *)(MAILBOX_SW_REG_BASE +
+								       offset),
+				 sizeof(uint64_t));
+
+	return *ptr;
+}
+
+static inline void mailbox_sw_regs_write(size_t offset, const void *src, size_t bytes)
+{
+	volatile uint8_t *dst = (volatile uint8_t *)(MAILBOX_SW_REG_BASE + offset);
+	const uint8_t *s = src;
+	size_t i;
+
+	for (i = 0; i < bytes; i++)
+		dst[i] = s[i];
+
+	dcache_writeback_region((__sparse_force void __sparse_cache *)(MAILBOX_SW_REG_BASE +
+								       offset),
+				bytes);
 }
 
 #endif /* __PLATFORM_LIB_MAILBOX_H__ */
