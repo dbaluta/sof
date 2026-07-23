@@ -86,14 +86,21 @@ int dai_config_dma_channel(struct dai_data *dd, struct comp_dev *dev, const void
 
 	switch (dai->type) {
 	case SOF_DAI_IMX_SAI:
+	case SOF_DAI_IMX_ESAI:
+	case SOF_DAI_IMX_MICFIL:
 		/*
-		 * i.MX's sdma_channel_get() ignores whatever channel number is
-		 * requested and always auto-picks a free one - the actual
-		 * per-DAI DMA request line comes from the SAI driver's own
-		 * plat_data fifo handshake config, not from here. Any value
-		 * other than SOF_DMA_CHAN_INVALID works.
+		 * The Zephyr native SDMA driver arms the channel on the DMA
+		 * request/event number passed as the channel-request filter
+		 * param (sdma_channel_filter() -> chan_data->event_source).
+		 * For i.MX SAI/ESAI/MICFIL that event is the low byte of the
+		 * DAI handshake - identical to the IPC3 path. Returning 0 (as
+		 * for SSP/DMIC) arms the channel on event 0, so the SAI FIFO
+		 * DMA request never triggers it and playback/capture stalls
+		 * with the DMA buffer never draining/filling.
 		 */
-		COMPILER_FALLTHROUGH;
+		channel = dai_get_handshake(dd->dai, dev->direction,
+					    dd->stream_id) & GENMASK(7, 0);
+		break;
 	case SOF_DAI_INTEL_SSP:
 		COMPILER_FALLTHROUGH;
 	case SOF_DAI_INTEL_DMIC:
@@ -196,7 +203,17 @@ int ipc_dai_data_config(struct dai_data *dd, struct comp_dev *dev)
 	case SOF_DAI_INTEL_UAOL:
 		break;
 	case SOF_DAI_IMX_SAI:
-		/* no extra config needed, same as HDA/UAOL above */
+	case SOF_DAI_IMX_ESAI:
+	case SOF_DAI_IMX_MICFIL:
+		/*
+		 * i.MX SAI/ESAI/MICFIL feed an SDMA channel and need the DMA
+		 * burst set to the DAI FIFO depth - identical to the IPC3 path
+		 * (ipc3/dai.c). The old "no extra config needed, same as HDA"
+		 * comment was wrong: HDA has its own bus-mastering DMA, SAI
+		 * does not, so leaving burst_elems 0 falls back to 8 in
+		 * dai_set_dma_config().
+		 */
+		dd->config.burst_elems = dai_get_fifo_depth(dd->dai, dai->direction);
 		break;
 	default:
 		/* other types of DAIs not handled for now */
