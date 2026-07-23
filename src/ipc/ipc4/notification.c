@@ -126,3 +126,36 @@ void send_process_data_error_notif_msg(uint32_t resource_id, uint32_t error_code
 	send_resource_notif(resource_id, SOF_IPC4_PROCESS_DATA_ERROR, SOF_IPC4_MODULE_INSTANCE,
 			    &error_data, sizeof(error_data));
 }
+
+/*
+ * Vendor (NXP i.MX) host period-elapsed notification.
+ *
+ * i.MX has no bus-mastering host DMA and therefore no host-side hardware to
+ * raise a period interrupt (unlike Intel HDA). The host copier calls this once
+ * per host period so the driver can drive snd_sof_pcm_period_elapsed() - the
+ * same role IPC3 stream position messages play. The affected host gateway id
+ * (node_id.f.v_index == stream_tag - 1) is carried in the header extension
+ * word; there is no payload.
+ */
+bool send_host_period_elapsed_notif_msg(uint32_t gtw_id)
+{
+	union ipc4_notification_header header;
+	struct ipc_msg *msg;
+
+	msg = ipc_notification_pool_get(0);
+	if (!msg)
+		return false;
+
+	header.dat = 0;
+	header.r.notif_type = SOF_IPC4_IMX_HOST_PERIOD_ELAPSED;
+	header.r.type = SOF_IPC4_GLB_NOTIFICATION;
+	header.r.rsp = SOF_IPC4_MESSAGE_DIR_MSG_REQUEST;
+	header.r.msg_tgt = SOF_IPC4_MESSAGE_TARGET_FW_GEN_MSG;
+
+	msg->header = header.dat;
+	msg->extension = gtw_id;
+
+	ipc_msg_send(msg, NULL, false);
+
+	return true;
+}

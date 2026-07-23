@@ -13,6 +13,7 @@
 #include <sof/lib/mailbox.h>
 #include <ipc4/gateway.h>
 #include <ipc4/fw_reg.h>
+#include <ipc4/notification.h>
 #include "copier.h"
 #include "host_copier.h"
 
@@ -379,7 +380,6 @@ void copier_host_dma_cb(struct comp_dev *dev, size_t bytes)
 	 * op. Indexed by host gateway id (node_id.f.v_index == stream_tag - 1).
 	 */
 	{
-		static uint32_t host_byte_cnt_dbg;	/* DEBUG only */
 		uint32_t gtw_id = cd->config.gtw_cfg.node_id.f.v_index;
 
 		if (gtw_id < IPC4_MAX_HOST_BYTE_CNT_SLOTS) {
@@ -389,14 +389,18 @@ void copier_host_dma_cb(struct comp_dev *dev, size_t bytes)
 			mailbox_sw_regs_write(off, &cd->hd->total_data_processed,
 					      sizeof(cd->hd->total_data_processed));
 
-			/* DEBUG: throttled ~every 200 transfers */
-			if ((host_byte_cnt_dbg++ % 200) == 0)
-				comp_info(dev,
-					  "DBG host_byte_cnt: dir=%d gtw_id=%u off=0x%x total=%u",
-					  dev->direction, gtw_id, off,
-					  (uint32_t)cd->hd->total_data_processed);
+#if CONFIG_IMX8M
+			/*
+			 * i.MX has no host-side DMA hardware to raise a period
+			 * interrupt. The host DMA transfer is period-sized, so
+			 * each completion callback marks one elapsed host period:
+			 * notify the driver to run snd_sof_pcm_period_elapsed().
+			 */
+			send_host_period_elapsed_notif_msg(gtw_id);
+#endif
 		} else {
-			comp_warn(dev, "DBG host_byte_cnt: gtw_id=%u OUT OF RANGE", gtw_id);
+			comp_warn(dev, "host gateway id %u exceeds byte counter slots",
+				  gtw_id);
 		}
 	}
 

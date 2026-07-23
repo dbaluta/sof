@@ -305,4 +305,7 @@ void send_mixer_underrun_notif_msg(uint32_t resource_id, uint32_t eos_flag, uint
 				   uint32_t expected_data_mixed);
 void ipc4_update_notification_mask(uint32_t ntfy_mask, uint32_t enabled_mask);
 
+/* Vendor (NXP i.MX): notify the host that one host period has elapsed. */
+bool send_host_period_elapsed_notif_msg(uint32_t gtw_id);
+
 #endif /* __IPC4_NOTIFICATION_H__ */
