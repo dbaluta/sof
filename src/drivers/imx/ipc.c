@@ -206,8 +206,14 @@ int ipc_platform_send_msg(const struct ipc_msg *msg)
 		dcache_writeback_region((__sparse_force void __sparse_cache *)MAILBOX_DSPBOX_HDR_BASE,
 					2 * sizeof(uint32_t));
 
-		tr_info(&ipc_tr, "ipc4: msg tx -> pri 0x%08x ext 0x%08x size %d",
-			msg->header, msg->extension, msg->tx_size);
+		/*
+		 * The i.MX host-period-elapsed notification (0x1bc80000) fires
+		 * every host period (~1 ms) and floods the log. Suppress it
+		 * entirely; log every other message.
+		 */
+		if (msg->header != 0x1bc80000)
+			tr_info(&ipc_tr, "ipc4: msg tx -> pri 0x%08x ext 0x%08x size %d",
+				msg->header, msg->extension, msg->tx_size);
 
 		if (msg->tx_size)
 			mailbox_dspbox_write(0, msg->tx_data, msg->tx_size);

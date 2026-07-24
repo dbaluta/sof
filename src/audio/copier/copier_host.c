@@ -389,7 +389,7 @@ void copier_host_dma_cb(struct comp_dev *dev, size_t bytes)
 			mailbox_sw_regs_write(off, &cd->hd->total_data_processed,
 					      sizeof(cd->hd->total_data_processed));
 
-#if CONFIG_IMX8M
+#if CONFIG_IMX8M && !defined(DBG_NO_PERIOD_NOTIF)
 			/*
 			 * i.MX has no host-side DMA hardware to raise a period
 			 * interrupt. The host DMA transfer is period-sized, so

@@ -963,8 +963,22 @@ int host_common_params(struct host_data *hd, struct comp_dev *dev,
 
 	/* TODO: should be taken from DMA */
 	if (hd->host.elem_array.count) {
-		period_bytes *= period_count;
-		period_count = 1;
+		/*
+		 * i.MX IPC4 bring-up: the host copier sets up a SINGLE contiguous
+		 * host element (the ALSA buffer's phy_addr) and the host "DMA" is
+		 * a software SDMA proxy that transfers one local element per LL
+		 * tick. Collapsing the ring into one period_count-sized element
+		 * makes each tick copy period_count periods at once (2x the SAI's
+		 * per-tick consumption) -> over-reads the ALSA buffer and doubles
+		 * the host byte counter (playback runs at 2x, EIO). Keep
+		 * period_count elements of one period each ONLY in that
+		 * single-element imx case. IPC3 (multi-element scatter list) uses
+		 * the original collapse and is unaffected.
+		 */
+		if (!(IS_ENABLED(CONFIG_IMX8M) && hd->host.elem_array.count == 1)) {
+			period_bytes *= period_count;
+			period_count = 1;
+		}
 	}
 
 	/* calculate DMA buffer size */
