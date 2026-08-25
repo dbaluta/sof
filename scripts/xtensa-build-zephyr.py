@@ -88,6 +88,7 @@ class PlatformConfig:
 	RIMAGE_KEY: pathlib.Path = pathlib.Path(SOF_TOP, "keys", "otc_private_key_3k.pem")
 	aliases: list = dataclasses.field(default_factory=list)
 	ipc4: bool = False
+	extra_conf: pathlib.Path = None
 
 # These cannot be built by everyone out of the box yet.
 # For instance: there's no open-source toolchain available for them yet.
@@ -228,6 +229,16 @@ platform_configs_all = {
 		f"RI-2023.11{xtensa_tools_version_postfix}",
 		"hifi4_mscale_v2_0_2_prod",
 		RIMAGE_KEY = "key param ignored by imx8m"
+	),
+	# i.MX8MP IPC4 build. Opt-in target; the default 'imx8m' stays IPC3.
+	"imx8m-ipc4" : PlatformConfig(
+		"imx", "imx8mp_evk/mimx8ml8/adsp",
+		f"RI-2023.11{xtensa_tools_version_postfix}",
+		"hifi4_mscale_v2_0_2_prod",
+		RIMAGE_KEY = "key param ignored by imx8m",
+		ipc4 = True,
+		extra_conf = pathlib.Path(SOF_TOP, "app", "boards",
+		                          "imx8mp_evk_mimx8ml8_adsp_ipc4.conf")
 	),
 	"imx8m_cm7" : PlatformConfig(
 		"imx", "imx8mp_evk/mimx8ml8/m7/ddr",
@@ -953,6 +964,9 @@ def build_platforms():
 		if platf_build_environ.get("ZEPHYR_TOOLCHAIN_VARIANT") == 'xt-clang':
 			extra_conf_files.append(str(pathlib.Path(SOF_TOP, "app", "llext_relocatable.conf")))
 
+		if platform_dict.get("extra_conf"):
+			extra_conf_files.append(str(platform_dict["extra_conf"]))
+
 		if extra_conf_files:
 			extra_conf_files = ";".join(extra_conf_files)
 			build_cmd.append(f"-DEXTRA_CONF_FILE={extra_conf_files}")
@@ -1350,7 +1364,7 @@ def gzip_compress(fname, gzdst=None):
 # Don't run sof_ri_info and ignore silently .ri files that don't have one.
 RI_INFO_UNSUPPORTED = []
 
-RI_INFO_UNSUPPORTED += ['imx8', 'imx8x', 'imx8m', 'imx8m_cm7', 'imx8ulp', 'imx95']
+RI_INFO_UNSUPPORTED += ['imx8', 'imx8x', 'imx8m', 'imx8m-ipc4', 'imx8m_cm7', 'imx8ulp', 'imx95']
 RI_INFO_UNSUPPORTED += ['rn', 'acp_6_0', 'acp_7_0', 'acp_7_x']
 RI_INFO_UNSUPPORTED += ['mt8186', 'mt8188', 'mt8195', 'mt8196', 'mt8365']
 RI_INFO_UNSUPPORTED += ['qemu_xtensa', 'qemu_xtensa_mmu', 'native_sim']

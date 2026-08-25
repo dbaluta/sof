@@ -87,7 +87,28 @@ int ipc_platform_compact_write_msg(struct ipc_cmd_hdr *hdr, int words)
 
 int ipc_platform_compact_read_msg(struct ipc_cmd_hdr *hdr, int words)
 {
+#if CONFIG_IPC_MAJOR_4
+	uint32_t *dst = (uint32_t *)hdr;
+
+	/*
+	 * i.MX carries the compact 8-byte header in the SRAM slot before the
+	 * hostbox payload, not in HW registers; read it back for the handler.
+	 */
+	if (words != 2)
+		return 0;
+
+	dcache_invalidate_region((__sparse_force void __sparse_cache *)MAILBOX_HOSTBOX_HDR_BASE,
+				 2 * sizeof(uint32_t));
+
+	dst[0] = ((volatile uint32_t *)MAILBOX_HOSTBOX_HDR_BASE)[0];
+	dst[1] = ((volatile uint32_t *)MAILBOX_HOSTBOX_HDR_BASE)[1];
+
+	tr_info(&ipc_tr, "ipc4: msg rx <- pri 0x%08x ext 0x%08x", dst[0], dst[1]);
+
+	return 2; /* number of words read */
+#else
 	return 0; /* number of words read - not currently used on this platform */
+#endif
 }
 
 enum task_state ipc_platform_do_cmd(struct ipc *ipc)
@@ -95,8 +116,13 @@ enum task_state ipc_platform_do_cmd(struct ipc *ipc)
 	struct ipc_cmd_hdr *hdr;
 	/* Use struct ipc_data *iipc = ipc_get_drvdata(ipc); if needed */
 
-	/* perform command */
+#if CONFIG_IPC_MAJOR_4
+	hdr = ipc_compact_read_msg();
+#else
 	hdr = mailbox_validate();
+#endif
+
+	/* perform command */
 	ipc_cmd(hdr);
 
 	return SOF_TASK_STATE_COMPLETED;
@@ -153,8 +179,28 @@ int ipc_platform_send_msg(const struct ipc_msg *msg)
 	if (ipc->is_notification_pending || gir0_set || gir1_set)
 		return -EBUSY;
 
+#if CONFIG_IPC_MAJOR_4
+	/* write the compact header to the slot before the dspbox payload */
+	{
+		volatile uint32_t *hdr = (volatile uint32_t *)MAILBOX_DSPBOX_HDR_BASE;
+
+		hdr[0] = msg->header;
+		hdr[1] = msg->extension;
+		dcache_writeback_region((__sparse_force void __sparse_cache *)MAILBOX_DSPBOX_HDR_BASE,
+					2 * sizeof(uint32_t));
+
+		/* suppress the ~1ms host-period notification; it floods the log */
+		if (msg->header != 0x1bc80000)
+			tr_info(&ipc_tr, "ipc4: msg tx -> pri 0x%08x ext 0x%08x size %d",
+				msg->header, msg->extension, msg->tx_size);
+
+		if (msg->tx_size)
+			mailbox_dspbox_write(0, msg->tx_data, msg->tx_size);
+	}
+#else
 	/* now send the message */
 	mailbox_dspbox_write(0, msg->tx_data, msg->tx_size);
+#endif
 
 	tr_dbg(&ipc_tr, "ipc: msg tx -> 0x%x", msg->header);
 

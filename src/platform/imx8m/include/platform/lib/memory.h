@@ -91,17 +91,42 @@
  */
 
 /* Mailbox configuration */
-#define SRAM_OUTBOX_BASE	SDRAM1_BASE
-#define SRAM_OUTBOX_SIZE	0x1000
-#define SRAM_OUTBOX_OFFSET	0
 
-#define SRAM_INBOX_BASE		(SRAM_OUTBOX_BASE + SRAM_OUTBOX_SIZE)
-#define SRAM_INBOX_SIZE		0x1000
-#define SRAM_INBOX_OFFSET	SRAM_OUTBOX_SIZE
+/*
+ * i.MX has no MU data registers for SOF, so the IPC4 compact 8-byte header is
+ * carried in the bytes preceding each payload box; the payload bases are
+ * shifted by the header size so the payload accessors are unchanged. For IPC3
+ * the header size is 0.
+ */
+#if CONFIG_IPC_MAJOR_4
+#define SRAM_IPC4_HDR_SIZE	8
+#else
+#define SRAM_IPC4_HDR_SIZE	0
+#endif
 
-#define SRAM_DEBUG_BASE		(SRAM_INBOX_BASE + SRAM_INBOX_SIZE)
+/* DSP -> host box (dspbox / outbox from the DSP point of view) */
+#define SRAM_OUTBOX_HDR_BASE	SDRAM1_BASE
+#define SRAM_OUTBOX_BASE	(SDRAM1_BASE + SRAM_IPC4_HDR_SIZE)
+#define SRAM_OUTBOX_SIZE	(0x1000 - SRAM_IPC4_HDR_SIZE)
+#define SRAM_OUTBOX_OFFSET	SRAM_IPC4_HDR_SIZE
+
+/* host -> DSP box (hostbox / inbox from the DSP point of view) */
+#define SRAM_INBOX_HDR_BASE	(SDRAM1_BASE + 0x1000)
+#define SRAM_INBOX_BASE		(SDRAM1_BASE + 0x1000 + SRAM_IPC4_HDR_SIZE)
+#define SRAM_INBOX_SIZE		(0x1000 - SRAM_IPC4_HDR_SIZE)
+#define SRAM_INBOX_OFFSET	(0x1000 + SRAM_IPC4_HDR_SIZE)
+
+#define SRAM_DEBUG_BASE		(SDRAM1_BASE + 0x2000)
 #define SRAM_DEBUG_SIZE		0x800
-#define SRAM_DEBUG_OFFSET	(SRAM_INBOX_OFFSET + SRAM_INBOX_SIZE)
+#define SRAM_DEBUG_OFFSET	0x2000
+
+/*
+ * IPC4 SW registers (copier LLP), after the debug window. Reuses the exception
+ * window's address space, which only the IPC3 layout uses.
+ */
+#define SRAM_SW_REG_BASE	(SRAM_DEBUG_BASE + SRAM_DEBUG_SIZE)
+#define SRAM_SW_REG_SIZE	0x800
+#define SRAM_SW_REG_OFFSET	(SRAM_DEBUG_OFFSET + SRAM_DEBUG_SIZE)
 
 #define SRAM_EXCEPT_BASE	(SRAM_DEBUG_BASE + SRAM_DEBUG_SIZE)
 #define SRAM_EXCEPT_SIZE	0x800
@@ -115,7 +140,7 @@
 #define SRAM_TRACE_SIZE		0x1000
 #define SRAM_TRACE_OFFSET (SRAM_STREAM_OFFSET + SRAM_STREAM_SIZE)
 
-#define SOF_MAILBOX_SIZE	(SRAM_INBOX_SIZE + SRAM_OUTBOX_SIZE \
+#define SOF_MAILBOX_SIZE	(0x1000 + 0x1000 \
 				+ SRAM_DEBUG_SIZE + SRAM_EXCEPT_SIZE \
 				+ SRAM_STREAM_SIZE + SRAM_TRACE_SIZE)
 
