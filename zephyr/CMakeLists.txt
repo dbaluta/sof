@@ -328,6 +328,28 @@ if (CONFIG_SOC_MIMX8QM6_ADSP OR CONFIG_SOC_MIMX8QX6_ADSP)
 	)
 
 	set(PLATFORM "imx8")
+
+	# IPC4 needs the ext-manifest-v4 capable rimage config. The board's
+	# board.cmake has already run board_set_rimage_target() by the time this
+	# module is processed, so a plain CACHE set is a no-op: both RIMAGE_TARGET
+	# and the zephyr_check_cache() shadow copy (CACHED_RIMAGE_TARGET) must be
+	# overridden with FORCE. imx8 (QM) and imx8x (QXP) use distinct targets.
+	if (CONFIG_IPC_MAJOR_4)
+		if (CONFIG_SOC_MIMX8QX6_ADSP)
+			set(rimage_ipc4_target imx8x_ipc4)
+		else()
+			set(rimage_ipc4_target imx8_ipc4)
+		endif()
+		set(RIMAGE_TARGET ${rimage_ipc4_target} CACHE STRING "rimage target" FORCE)
+		set(CACHED_RIMAGE_TARGET ${rimage_ipc4_target} CACHE STRING
+		    "Selected rimage target" FORCE)
+
+		# Keep the ".module" manifest entries (read by rimage and by the
+		# firmware's ipc4_get_comp_drv() at runtime) from being dropped by
+		# --gc-sections.
+		zephyr_linker_sources(DATA_SECTIONS
+			${sof_top_dir}/src/platform/imx8/linker/module-section.ld)
+	endif()
 endif()
 
 if (CONFIG_SOC_MIMX8ML8_ADSP)
