@@ -13,6 +13,9 @@
 
 #define HOST_PAGE_SIZE 4096
 
+/* local buffer size of DMA tracing (also used by the IPC4 trace-xfer helper) */
+#define DMA_TRACE_LOCAL_SIZE	HOST_PAGE_SIZE
+
 #define PLATFORM_PAGE_TABLE_SIZE 256
 
 /* TODO: generous (SOF is usually used with 2 channels at most on i.MX

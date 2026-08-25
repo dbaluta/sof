@@ -18,6 +18,15 @@
 };
 
 &sai3 {
+	/*
+	 * The WM8962 is the bit-clock/frame-sync provider and takes its MCLK
+	 * from the SAI3 MCLK output (Linux DTS: wm8962 mclk = IMX95_CLK_SAI3
+	 * @ 12.288 MHz). The SAI must therefore drive its MCLK pin: without
+	 * mclk-is-output the nxp,dai-sai driver leaves MCLK gated, the codec
+	 * gets no SYSCLK (WM8962 "DC servo timed out"), never generates BCLK,
+	 * and the SAI TX FIFO/eDMA never drain -> playback stalls (-EIO).
+	 */
+	mclk-is-output;
 	tx-fifo-watermark = <8>;
 	rx-fifo-watermark = <96>;
 	fifo-depth = <96>;
