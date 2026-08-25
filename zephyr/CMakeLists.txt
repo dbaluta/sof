@@ -435,6 +435,22 @@ if (CONFIG_SOC_MIMX8UD7_ADSP)
 	)
 
 	set(PLATFORM "imx8ulp")
+
+	# IPC4 needs the ext-manifest-v4 capable rimage config. As on imx8, the
+	# board.cmake has already run board_set_rimage_target(), so both
+	# RIMAGE_TARGET and its zephyr_check_cache() shadow (CACHED_RIMAGE_TARGET)
+	# must be overridden with FORCE.
+	if (CONFIG_IPC_MAJOR_4)
+		set(RIMAGE_TARGET imx8ulp_ipc4 CACHE STRING "rimage target" FORCE)
+		set(CACHED_RIMAGE_TARGET imx8ulp_ipc4 CACHE STRING
+		    "Selected rimage target" FORCE)
+
+		# Keep the ".module" manifest entries (read by rimage and by the
+		# firmware's ipc4_get_comp_drv() at runtime) from being dropped by
+		# --gc-sections.
+		zephyr_linker_sources(DATA_SECTIONS
+			${sof_top_dir}/src/platform/imx8ulp/linker/module-section.ld)
+	endif()
 endif()
 
 if (CONFIG_SOC_MIMX9352_A55)
