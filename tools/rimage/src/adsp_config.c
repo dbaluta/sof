@@ -2039,6 +2039,35 @@ static int parse_adsp_config_v1_0(const toml_table_t *toml, struct image *image)
 	return 0;
 }
 
+/* i.MX IPC4: like v1.0 but the image is prefixed with an unsigned ext-manifest
+ * v4 so the driver can enumerate modules; no signing/CSE/CSS
+ */
+static int parse_adsp_config_v1_1(const toml_table_t *toml, struct image *image)
+{
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
+	struct parse_ctx ctx;
+	int ret;
+
+	/* version array has already been parsed, so increment ctx.array_cnt */
+	parse_ctx_init(&ctx);
+	++ctx.array_cnt;
+
+	ret = parse_adsp(toml, &ctx, out, verbose);
+	if (ret < 0)
+		return err_key_parse("adsp", NULL);
+
+	out->write_firmware = simple_write_firmware;
+	out->write_firmware_ext_man = ext_man_write_imx_ipc4;
+	out->write_firmware_meu = NULL;
+
+	ret = assert_everything_parsed(toml, &ctx);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
 static int parse_adsp_config_v1_5(const toml_table_t *toml, struct image *image)
 {
 	struct adsp *out = image->adsp;
@@ -2310,6 +2339,7 @@ static const struct config_parser *find_config_parser(int64_t version[2])
 	/* list of supported configuration version with handler to parser */
 	static const struct config_parser parsers[] = {
 		{1, 0, parse_adsp_config_v1_0},
+		{1, 1, parse_adsp_config_v1_1},
 		{1, 5, parse_adsp_config_v1_5},
 		{1, 8, parse_adsp_config_v1_8},
 		{2, 5, parse_adsp_config_v2_5},
