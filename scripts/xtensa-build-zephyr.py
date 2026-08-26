@@ -1220,8 +1220,16 @@ def install_platform(platform, sof_output_dir, platf_build_environ, platform_wco
 		# Disguise ourselves for local testing purposes
 		output_fwname = "dsp_basefw.bin"
 	else:
-		# Regular name (deployable build also uses SOF naming convention)
-		output_fwname = "".join(["sof-", platform, ".ri"])
+		# Regular name (deployable build also uses SOF naming convention).
+		# The i.MX IPC4 opt-in targets (imx95-ipc4, imx8m-ipc4, ...) keep the
+		# SoC's canonical image name (sof-imx95.ri) - the IPC3/IPC4 split is
+		# the install directory (sof/ vs sof-ipc4/, plus the per-platform
+		# subdir), matching what the kernel dev desc loads
+		# (default_fw_filename = sof-<mach>.ri). Only the build-target's
+		# "-ipc4" suffix is dropped from the file name.
+		fw_basename = platform[:-len("-ipc4")] if platform.endswith("-ipc4") \
+			else platform
+		output_fwname = "".join(["sof-", fw_basename, ".ri"])
 
 	if args.deployable_build and platform_configs[platform].ipc4:
 		install_key_dir = pathlib.Path(sof_output_dir, platform)
