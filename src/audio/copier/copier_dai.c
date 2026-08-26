@@ -10,6 +10,8 @@
 #include <sof/trace/trace.h>
 #include <sof/audio/component_ext.h>
 #include <ipc/dai.h>
+#include <ipc4/gateway.h>
+#include <sof/tlv.h>
 #include <sof/audio/module_adapter/module/generic.h>
 #include "copier.h"
 #include "dai_copier.h"
@@ -324,6 +326,24 @@ __cold int copier_dai_create(struct comp_dev *dev, struct copier_data *cd,
 		break;
 	case ipc4_i2s_link_output_class:
 	case ipc4_i2s_link_input_class:
+#if CONFIG_IMX
+		/* map I2S_LINK to SAI; take dai.format from the DAI config TLV */
+		{
+			uint32_t prefix = sizeof(struct sof_ipc4_gtw_attributes);
+			void *dcfg = NULL;
+			uint32_t dlen = 0;
+
+			if (gtw_cfg_size > prefix)
+				tlv_value_get(gtw_cfg_data + prefix,
+					      gtw_cfg_size - prefix,
+					      GTW_IMX_DAI_CONFIG_ID, &dcfg, &dlen);
+			if (dcfg && dlen >= sizeof(struct sof_ipc_dai_config))
+				dai.format = ((struct sof_ipc_dai_config *)dcfg)->format;
+		}
+		dai.type = SOF_DAI_IMX_SAI;
+		cd->gtw_type = ipc4_gtw_link;
+		break;
+#else
 		dai.type = SOF_DAI_INTEL_SSP;
 		dai.is_config_blob = true;
 		cd->gtw_type = ipc4_gtw_ssp;
@@ -333,6 +353,7 @@ __cold int copier_dai_create(struct comp_dev *dev, struct copier_data *cd,
 			return -EINVAL;
 		}
 		break;
+#endif
 	case ipc4_alh_link_output_class:
 	case ipc4_alh_link_input_class:
 #if ACE_VERSION > ACE_VERSION_1_5

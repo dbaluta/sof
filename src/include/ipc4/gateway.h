@@ -150,6 +150,11 @@ struct sof_ipc4_imx_host_config {
 	uint32_t dma_buffer_size;
 } __attribute__((packed, aligned(4)));
 
+/* i.MX SAI config TLV (a struct sof_ipc_dai_config); matches kernel
+ * SOF_IPC4_GTW_IMX_DAI_CONFIG_ID
+ */
+#define GTW_IMX_DAI_CONFIG_ID 0x2000
+
 /**
  * \brief Generic gateway configuration blob container.
  * \ingroup ipc4_gateway_api
