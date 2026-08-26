@@ -11,9 +11,14 @@
 #include <sof/audio/module_adapter/module/generic.h>
 #include <sof/lib/mailbox.h>
 #include <rtos/userspace_helper.h>
+#include <sof/lib/mailbox.h>
 #include <ipc4/gateway.h>
+#include <ipc4/fw_reg.h>
+#include <ipc4/notification.h>
 #include "copier.h"
 #include "host_copier.h"
+
+#include <stddef.h>
 
 LOG_MODULE_DECLARE(copier, CONFIG_SOF_LOG_LEVEL);
 
@@ -334,6 +339,27 @@ void copier_host_dma_cb(struct comp_dev *dev, size_t bytes)
 
 	/* update position */
 	host_common_update(cd->hd, dev, bytes);
+
+	/* Publish host byte counter to FW regs so a non-HDA host (i.MX) can derive the PCM pointer. */
+	{
+		uint32_t gtw_id = cd->config.gtw_cfg.node_id.f.v_index;
+
+		if (gtw_id < IPC4_MAX_HOST_BYTE_CNT_SLOTS) {
+			uint32_t off = offsetof(struct ipc4_fw_registers, host_byte_cnt) +
+				       gtw_id * sizeof(uint64_t);
+
+			mailbox_sw_regs_write(off, &cd->hd->total_data_processed,
+					      sizeof(cd->hd->total_data_processed));
+
+#if CONFIG_IMX && !defined(DBG_NO_PERIOD_NOTIF)
+			/* i.MX has no host DMA period IRQ; each period-sized callback signals one period. */
+			send_host_period_elapsed_notif_msg(gtw_id);
+#endif
+		} else {
+			comp_warn(dev, "host gateway id %u exceeds byte counter slots",
+				  gtw_id);
+		}
+	}
 
 	/* callback for one shot copy */
 	if (cd->hd->copy_type == COMP_COPY_ONE_SHOT)
