@@ -140,7 +140,7 @@ static int host_copy_one_shot(struct host_data *hd, struct comp_dev *dev, copy_c
 
 	copy_bytes = host_get_copy_bytes_one_shot(hd);
 	if (!copy_bytes) {
-		comp_info(dev, "no bytes to copy");
+		comp_dbg(dev, "no bytes to copy");
 		return ret;
 	}
 
@@ -210,7 +210,7 @@ static int host_copy_one_shot(struct host_data *hd, struct comp_dev *dev, copy_c
 
 	copy_bytes = host_get_copy_bytes_one_shot(hd);
 	if (!copy_bytes) {
-		comp_info(dev, "no bytes to copy");
+		comp_dbg(dev, "no bytes to copy");
 		return ret;
 	}
 

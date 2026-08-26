@@ -1359,8 +1359,6 @@ static int dai_comp_trigger_internal(struct dai_data *dd, struct comp_dev *dev, 
 {
 	int ret = 0;
 
-	comp_dbg(dev, "command = %u", cmd);
-
 #ifdef CONFIG_IPC_MAJOR_3
 	if (dev->state == comp_get_requested_state(cmd))
 		return PPL_STATUS_PATH_STOP;
