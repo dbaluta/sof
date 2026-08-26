@@ -25,6 +25,7 @@
 #include <ipc4/ssp.h>
 #include <ipc4/fw_reg.h>
 #include <ipc/dai.h>
+#include <ipc/dai-imx.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -86,6 +87,13 @@ int dai_config_dma_channel(struct dai_data *dd, struct comp_dev *dev, const void
 	int channel;
 
 	switch (dai->type) {
+	case SOF_DAI_IMX_SAI:
+	case SOF_DAI_IMX_ESAI:
+	case SOF_DAI_IMX_MICFIL:
+		/* arm SDMA on the DAI handshake low byte (event source), like IPC3 */
+		channel = dai_get_handshake(dd->dai, dev->direction,
+					    dd->stream_id) & GENMASK(7, 0);
+		break;
 	case SOF_DAI_INTEL_SSP:
 		COMPILER_FALLTHROUGH;
 	case SOF_DAI_INTEL_DMIC:
@@ -186,6 +194,12 @@ int ipc_dai_data_config(struct dai_data *dd, struct comp_dev *dev)
 
 		break;
 	case SOF_DAI_INTEL_UAOL:
+		break;
+	case SOF_DAI_IMX_SAI:
+	case SOF_DAI_IMX_ESAI:
+	case SOF_DAI_IMX_MICFIL:
+		/* SDMA burst must match the DAI FIFO depth, like IPC3 */
+		dd->config.burst_elems = dai_get_fifo_depth(dd->dai, dai->direction);
 		break;
 	default:
 		/* other types of DAIs not handled for now */
