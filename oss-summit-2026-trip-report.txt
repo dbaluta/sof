@@ -1,0 +1,118 @@
+Subject: Open Source Summit Europe 2026 – Trip Report
+
+Hi all,
+
+Last week I attended Open Source Summit Europe + Embedded Linux Conference + Zephyr Developer Summit,
+held in Prague, October 7–9. Below is a summary of NXP's participation and the key themes from the
+conference.
+
+
+NXP PRESENCE
+
+NXP had a strong showing across three tracks:
+- Embedded Linux Conference (ELC) – 4 talks
+- Zephyr Developer Summit – 3 talks
+- PX4 Flight Control – 1 talk
+
+NXP was also a Silver sponsor.
+
+
+NXP TALKS
+
+- The Upstream Way: Current State of i.MX SoCs in the Linux Kernel (Daniel Baluta) — Generated
+  significant interest; many attendees confirmed active use of i.MX SoCs in their products.
+  https://osselceu2026.sched.com/event/2RaeH/the-upstream-way-current-state-of-imx-socs-in-the-linux-kernel-daniel-baluta-nxp-semiconductors
+
+- Real-Time Performance Comparison of Linux, Zephyr and FreeRTOS (Zbynek Fedra & Mingkai Hu) —
+  Benchmarked the three RTOSes side by side; practical data for product teams choosing a platform.
+  https://osselceu2026.sched.com/event/2RaaM/real-time-performance-comparison-of-linux-zephyr-and-freertos-zbynek-fedra-mingkai-hu-nxp
+
+- Ten Years of Zephyr: Replace Linux, or Work With It? (Iuliana Prodan) — Examined where Zephyr fits
+  alongside Linux in modern embedded systems; well-attended given Zephyr's 10th anniversary milestone
+  at this conference.
+  https://osselceu2026.sched.com/event/2RaWm/ten-years-of-zephyr-replace-linux-or-work-with-it-iuliana-prodan-nxp-semiconductors
+
+- Bringing IEC 60730 Class B Functional Safety to Zephyr (Andrej Butok) — Covered NXP's work on
+  functional safety certification for Zephyr, relevant for industrial and appliance markets.
+  https://osselceu2026.sched.com/event/2RaaA/bringing-iec-60730-class-b-functional-safety-to-zephyr-andrej-butok-nxp-semiconductors
+
+- Learning to Navigate: Challenges of RL with PX4 as a Real-Time Controller (Kyrillos Adeeb) — NXP's
+  contribution to the PX4 track, covering reinforcement learning integration with PX4 on NXP hardware.
+  https://osselceu2026.sched.com/event/2RadS/learning-to-navigate-challenges-of-rl-with-px4-as-a-real-time-controller-kyrillos-adeeb-nxp
+
+- Optimizing AI for Resource-Constrained Edge Devices (Pavel Macenauer) — Techniques for deploying
+  inference on memory- and power-limited hardware; directly applicable to i.MX NPU positioning.
+  https://osselceu2026.sched.com/event/2Rajk/optimizing-ai-for-resource-constrained-edge-devices-pavel-macenauer-nxp-semiconductors
+
+
+HIGHLIGHT SESSIONS (OTHER SPEAKERS)
+
+- Fireside Chat: Linus Torvalds & Dirk Hohndel — The traditional conference highlight. Linus on AI:
+  "I think you need to be very careful using AI when doing something real and important," but also
+  "I actually really like using AI — I use it to do things that I'm bad at." Measured, pragmatic view.
+
+- Edge AI on Linux (Karim Yaghmour, Opersys) — Strong overview of the Edge AI landscape. Two
+  approaches: AI built into SoC (NXP i.MX95, TI AM6xA, Qualcomm Dragonwing) vs. discrete AI
+  accelerators (NXP Ara-2/Kinara, Hailo 10H, MemryX MX3, Axelera Metis). Sparked a question about
+  NXP's plans for upstreaming the Neutron NPU driver.
+  https://osselceu2026.sched.com/event/2Rag4/edge-ai-on-linux-karim-yaghmour-opersys-inc
+
+- Navigating the Complexity of Modern SoC Bootflows (Marco Felsch, Pengutronix) — Used i.MX6/8/9 as
+  the running example to show how bootflow complexity has grown from the relatively straightforward
+  i.MX6 to the multi-stage, multi-firmware flow on i.MX95.
+  https://osselceu2026.sched.com/event/2Rab5/navigating-the-complexity-of-modern-soc-bootflows-marco-felsch-pengutronix-ek
+
+- Asymmetric Multi-Processing (AMP) for Embedded — Where Are We? (Wolfram Sang, Renesas) — Survey of
+  the current AMP ecosystem in Linux; relevant to NXP's i.MX CM7 and remoteproc work.
+  https://osselceu2026.sched.com/event/2RaWd/asymmetric-multi-processing-amp-for-embedded-where-are-we-wolfram-sang-renesas-consultant
+
+- A Clockwork Frequency: Bringing Spread Spectrum to the Linux Clock Subsystem (Dario Binacchi,
+  Amarula) — EMC-driven clock spreading in the Linux clk framework; useful reference for i.MX clock
+  subsystem work.
+  https://osselceu2026.sched.com/event/2RaYT/a-clockwork-frequency-bringing-spread-spectrum-to-the-linux-clock-subsystem-dario-binacchi-amarula-solutions
+
+- Zephyr on the Big Core: Real-Time on the i.MX93 Cortex-A55 with Zephyr (Ryan Erickson, Ezurio) —
+  Showed Zephyr running on an A-class core for deterministic workloads; directly relevant to NXP
+  platforms.
+  https://osselceu2026.sched.com/event/2RaiL/zephyr-on-the-big-core-real-time-on-the-imx93-cortex-a55-with-zephyr-ryan-erickson-ezurio
+
+
+COMMUNITY & INDUSTRY FEEDBACK ON NXP UPSTREAMING
+
+- Toradex acknowledged clear upstreaming progress in the i.MX tree over the past year. Key ask:
+  improve the process for partner vendors submitting patches to the NXP BSP tree.
+
+- Siemens stated directly that they want to use the Linux kernel mainline tree and are satisfied with
+  upstreaming progress for i.MX8/9. They want NXP to continue at the same pace.
+
+- General community feedback: strong demand for public access to the linux-nxp-rebase tree so partners
+  can more easily upstream their own i.MX features.
+
+- i.MX95 display upstreaming: Had a productive discussion with Marek Vasut and Frank Li on unblocking
+  this. Action item: revive the mailing list thread with a short status summary and clear next steps.
+
+- Overall sentiment: NXP's presence was well received. Multiple attendees asked for broader NXP
+  representation, specifically from display/camera and NPU subsystems, at future events.
+
+
+KEY TAKEAWAYS
+
+1. AI in open source is mainstream, but with caution. The dominant theme across the conference. Most
+   contributors now use AI tools; maintainers expect AI-flagged review comments (sashiko and similar
+   tools) to be addressed before a human reviewer will look at a patch.
+
+2. NXP upstreaming credibility is growing. Feedback from Toradex, Siemens, and independent developers
+   was consistently positive. The work is visible and valued; continued investment is expected.
+
+3. Edge AI is a competitive landscape. NXP i.MX95 is visible as a first-class example of integrated
+   AI silicon. The Neutron NPU upstream story needs to be defined and communicated proactively.
+
+4. Zephyr's 10th anniversary signals maturity. The project is moving from early adoption to production
+   use in safety-critical and automotive segments. NXP's functional safety and real-time work is well
+   positioned.
+
+5. Action required — i.MX95 display: Resume mailing list discussion with Marek Vasut / Frank Li;
+   provide summary and concrete next steps to unblock upstream.
+
+6. Action required — Partner access to linux-nxp-rebase: The community wants it. Align internally on
+   the policy and timeline.
