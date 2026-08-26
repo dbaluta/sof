@@ -1419,28 +1419,33 @@ static const struct comp_driver *ipc4_get_fuzzer_drv(uint32_t module_id)
  * - comp_new_ipc4()
  * all of which are __cold
  */
+#if !defined(RIMAGE_MANIFEST) && CONFIG_IMX
+/* i.MX: module table linked into the image, see the platform's platform.c */
+const struct sof_man_module *platform_ipc4_get_module(uint32_t module_id);
+#endif
+
 __cold const struct comp_driver *ipc4_get_comp_drv(uint32_t module_id)
 {
 	const struct sof_man_fw_desc *desc = NULL;
 	const struct sof_man_module *mod;
-	uint32_t entry_index;
 
 	assert_can_be_cold();
 
-#ifdef RIMAGE_MANIFEST
+#if defined(RIMAGE_MANIFEST)
 	desc = (const struct sof_man_fw_desc *)IMR_BOOT_LDR_MANIFEST_BASE;
 #elif defined(CONFIG_ARCH_POSIX_LIBFUZZER)
 	return ipc4_get_fuzzer_drv(module_id);
-#else
-	/* Non-rimage platforms have no component facility yet.
-	 * This needs to move to the platform layer.
-	 */
+#elif !CONFIG_IMX
+	/* non-rimage platforms have no component facility yet */
 	return NULL;
 #endif
 
 	uint32_t lib_idx = LIB_MANAGER_GET_LIB_ID(module_id);
 
 	if (lib_idx == 0) {
+#if defined(RIMAGE_MANIFEST)
+		uint32_t entry_index;
+
 		/* module_id 0 is used for base fw which is in entry 1 or 2 */
 		if (!module_id)
 			entry_index = 1 + IS_ENABLED(CONFIG_COLD_STORE_EXECUTE_DRAM);
@@ -1454,6 +1459,14 @@ __cold const struct comp_driver *ipc4_get_comp_drv(uint32_t module_id)
 
 		mod = (const struct sof_man_module *)((const char *)desc +
 						      SOF_MAN_MODULE_OFFSET(entry_index));
+#elif CONFIG_IMX
+		/* module IDs map 1:1 to the platform manifest table (base FW is entry 0) */
+		mod = platform_ipc4_get_module(module_id);
+		if (!mod) {
+			tr_err(&comp_tr, "Error: module id %u out of bounds.", module_id);
+			return NULL;
+		}
+#endif
 	} else {
 		/* Library index greater than 0 possible only when LIBRARY_MANAGER
 		 * support enabled.
